@@ -131,3 +131,22 @@ input:focus, select:focus { outline: 3px solid rgba(40,75,99,.16); border-color:
   .bar-row { grid-template-columns: 120px 1fr 56px; }
   .distance { text-align: left; }
 }
+
+.badge.confidence.good { background: #e8f3ed; color: var(--good); }
+.badge.confidence.medium { background: #fff7e7; color: #8a5200; }
+.badge.confidence.low { background: #f7e9e6; color: #8a2d20; }
+.method-details { margin-top: 12px; border: 1px solid #e7efe9; border-radius: 16px; background: #fbfdfb; padding: 10px 12px; }
+.method-details summary { cursor: pointer; font-weight: 850; color: var(--accent); }
+.method-details p, .methodology-panel p { color: var(--muted); line-height: 1.5; margin: 10px 0; }
+.method-meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.method-meta span { background: #eef3f2; border-radius: 999px; padding: 5px 9px; font-size: .78rem; font-weight: 800; color: #27474b; }
+.method-list { display: grid; gap: 4px; margin: 10px 0; }
+.method-row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid #edf0ed; font-size: .9rem; }
+.method-row:first-child { border-top: 0; }
+.method-row span { color: var(--muted); }
+.method-row small { color: var(--muted); font-weight: 700; margin-left: 5px; }
+.method-row strong { text-align: right; color: var(--ink); }
+.method-row.missing strong { color: #8a5200; }
+.methodology-panel { background: white; border: 1px solid var(--line); border-radius: 20px; padding: 20px; box-shadow: 0 8px 26px rgba(32,38,48,.05); }
+.methodology-panel h3 { margin-bottom: 8px; }
+.method-note { background: #f5faf7; border: 1px solid #d7e5df; border-radius: 16px; padding: 12px; }

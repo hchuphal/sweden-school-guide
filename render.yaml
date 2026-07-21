@@ -8,5 +8,5 @@ services:
     envVars:
       - key: SCHOOLGUIDE_DB_PATH
         value: data/schoolguide.sqlite
-      - key: DEFAULT_TARGET_YEAR
-        value: "2027"
+      - key: DEFAULT_YEAR_MODE
+        value: current

@@ -16,9 +16,60 @@ STATIC_DIR = ROOT / "static"
 DATA_DIR = ROOT / "data"
 IMPORT_DIR = DATA_DIR / "imports"
 DB_PATH = Path(os.getenv("SCHOOLGUIDE_DB_PATH", DATA_DIR / "schoolguide.sqlite"))
-DEFAULT_TARGET_YEAR = int(os.getenv("DEFAULT_TARGET_YEAR", "2027"))
-
+DEFAULT_YEAR_MODE = os.getenv("DEFAULT_YEAR_MODE", "current").strip().lower()
 BASELINE_FILE = DATA_DIR / "schools-2026.json"
+APP_VERSION = "0.6.0"
+
+QUALITY_METHOD_VERSION = "v0.6 transparent weighted score"
+MISSING_VALUE_BASELINE = 6.5
+
+QUALITY_COMPONENTS = [
+    {
+        "key": "f0Satisfaction",
+        "label": "F0 parent satisfaction",
+        "weight": 20,
+        "description": "Most relevant signal for families choosing förskoleklass.",
+    },
+    {
+        "key": "safety",
+        "label": "Safety / trygghet",
+        "weight": 20,
+        "description": "How safe pupils/guardians report the school environment to be.",
+    },
+    {
+        "key": "studyPeace",
+        "label": "Study peace / studiero",
+        "weight": 15,
+        "description": "Classroom calm and ability to work without disruption.",
+    },
+    {
+        "key": "support",
+        "label": "Support / stöd",
+        "weight": 10,
+        "description": "Whether pupils feel they get help and support when needed.",
+    },
+    {
+        "key": "studentSatisfaction",
+        "label": "Student satisfaction",
+        "weight": 10,
+        "description": "Older-pupil view, usually grade 5 or grade 8 depending on available data.",
+    },
+    {
+        "key": "parentSatisfaction",
+        "label": "Parent satisfaction",
+        "weight": 10,
+        "description": "Guardian view of the school beyond F0 where available.",
+    },
+    {
+        "key": "academicScore",
+        "label": "Academic signal",
+        "weight": 10,
+        "description": "Normalised signal from merit values, national tests or verified academic indicators.",
+    },
+]
+DATA_CONFIDENCE_WEIGHT = 5
+TOTAL_COMPONENT_WEIGHT = sum(item["weight"] for item in QUALITY_COMPONENTS)
+TOTAL_QUALITY_WEIGHT = TOTAL_COMPONENT_WEIGHT + DATA_CONFIDENCE_WEIGHT
 
 SCHOOL_FIELDS = [
     "slug", "name", "type", "grades", "area", "address", "lat", "lng", "profile", "sources"
@@ -26,8 +77,8 @@ SCHOOL_FIELDS = [
 
 METRIC_FIELDS = [
     "qualityScore", "admissionScore", "admissionNote", "f0Satisfaction", "safety", "studyPeace",
-    "support", "studentSatisfaction", "parentSatisfaction", "academicSignal", "decisionNote",
-    "lastVerified", "verificationNote"
+    "support", "studentSatisfaction", "parentSatisfaction", "academicSignal", "academicScore",
+    "decisionNote", "lastVerified", "verificationNote"
 ]
 
 
@@ -76,6 +127,7 @@ def init_db() -> None:
                 studentSatisfaction REAL,
                 parentSatisfaction REAL,
                 academicSignal TEXT,
+                academicScore REAL,
                 decisionNote TEXT,
                 lastVerified TEXT,
                 verificationNote TEXT,
@@ -95,6 +147,10 @@ def init_db() -> None:
             )
             """
         )
+        # Lightweight migration for databases created by v0.4.
+        columns = {row["name"] for row in conn.execute("PRAGMA table_info(school_year_metrics)").fetchall()}
+        if "academicScore" not in columns:
+            conn.execute("ALTER TABLE school_year_metrics ADD COLUMN academicScore REAL")
         conn.commit()
 
 
@@ -179,18 +235,109 @@ def bootstrap_database() -> None:
         upsert_schools(load_json_file(path), path.name)
 
 
-def metric_row_for(conn: sqlite3.Connection, slug: str, year_param: str) -> tuple[sqlite3.Row | None, bool, int | None]:
-    if year_param == "latest":
-        row = conn.execute(
-            "SELECT * FROM school_year_metrics WHERE slug=? ORDER BY year DESC LIMIT 1",
-            (slug,),
-        ).fetchone()
-        return row, False, None
-
+def coerce_score(value: Any) -> float | None:
+    if value is None:
+        return None
     try:
-        requested_year = int(year_param)
+        score = float(value)
+    except (TypeError, ValueError):
+        return None
+    if score < 0:
+        return 0.0
+    if score > 10:
+        # Accept accidental 0-100 imports and normalise to 0-10.
+        if score <= 100:
+            return score / 10
+        return 10.0
+    return score
+
+
+def calculate_quality(metric: sqlite3.Row | dict[str, Any]) -> dict[str, Any]:
+    components: list[dict[str, Any]] = []
+    available_weight = 0.0
+    weighted_points = 0.0
+    missing_keys: list[str] = []
+
+    for component in QUALITY_COMPONENTS:
+        key = component["key"]
+        weight = float(component["weight"])
+        raw_value = metric[key] if isinstance(metric, sqlite3.Row) else metric.get(key)
+        score_0_to_10 = coerce_score(raw_value)
+        is_missing = score_0_to_10 is None
+        used_score = MISSING_VALUE_BASELINE if is_missing else score_0_to_10
+        contribution = (used_score / 10) * weight
+        weighted_points += contribution
+        if is_missing:
+            missing_keys.append(key)
+        else:
+            available_weight += weight
+        components.append(
+            {
+                "key": key,
+                "label": component["label"],
+                "weight": weight,
+                "value": round(score_0_to_10, 1) if score_0_to_10 is not None else None,
+                "usedValue": round(used_score, 1),
+                "status": "missing-neutral-baseline" if is_missing else "available",
+                "contribution": round(contribution, 2),
+                "description": component["description"],
+            }
+        )
+
+    completeness = available_weight / TOTAL_COMPONENT_WEIGHT if TOTAL_COMPONENT_WEIGHT else 0
+    confidence_component = completeness * DATA_CONFIDENCE_WEIGHT
+    final_score = weighted_points + confidence_component
+    final_score = max(0, min(100, final_score))
+
+    if completeness >= 0.85:
+        confidence_label = "High"
+    elif completeness >= 0.55:
+        confidence_label = "Medium"
+    else:
+        confidence_label = "Low"
+
+    return {
+        "qualityScore": round(final_score),
+        "qualityScoreExact": round(final_score, 2),
+        "qualityMethodVersion": QUALITY_METHOD_VERSION,
+        "dataCompletenessPct": round(completeness * 100),
+        "dataConfidenceLabel": confidence_label,
+        "missingQualityFields": missing_keys,
+        "qualityBreakdown": components,
+        "qualityFormula": {
+            "weights": [
+                {"key": item["key"], "label": item["label"], "weight": item["weight"]}
+                for item in QUALITY_COMPONENTS
+            ],
+            "dataConfidenceWeight": DATA_CONFIDENCE_WEIGHT,
+            "missingValueBaseline": MISSING_VALUE_BASELINE,
+            "note": "Missing quality metrics use a neutral 6.5/10 placeholder and reduce the data-confidence component. Admission realism is not included in this score.",
+        },
+    }
+
+
+def resolve_year_param(conn: sqlite3.Connection, year_param: str | None) -> tuple[int | None, str]:
+    """Resolve the UI/API year mode into the current imported data year.
+
+    Default mode is `current`: use the newest year that exists in the database.
+    This avoids asking for a future year before official data has been imported.
+    When a newer official import appears later, `current` automatically moves to that year.
+    """
+    clean = (year_param or "current").strip().lower()
+    row = conn.execute("SELECT MAX(year) AS year FROM school_year_metrics").fetchone()
+    latest_year = int(row["year"]) if row and row["year"] is not None else None
+    if clean in {"current", "latest", "auto"}:
+        return latest_year, clean
+    try:
+        return int(clean), "explicit"
     except ValueError:
-        raise HTTPException(status_code=400, detail="year must be 'latest' or a four-digit year")
+        raise HTTPException(status_code=400, detail="year must be 'current', 'latest', 'auto' or a four-digit year")
+
+
+def metric_row_for(conn: sqlite3.Connection, slug: str, year_param: str | None) -> tuple[sqlite3.Row | None, bool, int | None]:
+    requested_year, _mode = resolve_year_param(conn, year_param)
+    if requested_year is None:
+        return None, False, None
 
     exact = conn.execute(
         "SELECT * FROM school_year_metrics WHERE slug=? AND year=?",
@@ -215,7 +362,7 @@ def metric_row_for(conn: sqlite3.Connection, slug: str, year_param: str) -> tupl
         "SELECT * FROM school_year_metrics WHERE slug=? ORDER BY year DESC LIMIT 1",
         (slug,),
     ).fetchone()
-    return any_year, True, requested_year
+    return any_year, bool(any_year), requested_year
 
 
 def combine_school_and_metric(school: sqlite3.Row, metric: sqlite3.Row, is_fallback: bool, requested_year: int | None) -> dict[str, Any]:
@@ -230,6 +377,11 @@ def combine_school_and_metric(school: sqlite3.Row, metric: sqlite3.Row, is_fallb
         f"Using {metric['year']} because {requested_year} data is not imported yet."
         if is_fallback and requested_year else None
     )
+
+    # Keep the old seeded/manual value visible for auditing, but do not use it as the displayed quality score.
+    result["editorialQualityScore"] = metric["qualityScore"]
+    computed = calculate_quality(metric)
+    result.update(computed)
     return result
 
 
@@ -238,7 +390,7 @@ def get_available_years(conn: sqlite3.Connection) -> list[int]:
     return [int(row["year"]) for row in rows]
 
 
-app = FastAPI(title="Gothenburg School Guide", version="0.4.0")
+app = FastAPI(title="Gothenburg School Guide", version=APP_VERSION)
 app.mount("/assets", StaticFiles(directory=STATIC_DIR), name="assets")
 
 
@@ -254,7 +406,24 @@ def home() -> FileResponse:
 
 @app.get("/api/health")
 def health() -> dict[str, Any]:
-    return {"status": "ok", "version": "0.4.0", "time": now_iso()}
+    return {"status": "ok", "version": APP_VERSION, "time": now_iso()}
+
+
+@app.get("/api/methodology")
+def methodology() -> dict[str, Any]:
+    return {
+        "version": APP_VERSION,
+        "qualityMethodVersion": QUALITY_METHOD_VERSION,
+        "qualityFormula": calculate_quality({})["qualityFormula"],
+        "admissionNote": "Admission realism is separate from quality. Municipal values can use Göteborg placement statistics; private-school values should be based on queue rules and verified local knowledge.",
+        "yearFallback": "Default year mode is current: the API uses the newest imported official data year and falls back per school only when that current-year record is missing.",
+        "recommendedSources": [
+            "Skolinspektionen Skolenkäten for survey ratings: F0 guardians, grundskola guardians, pupils grade 5/8 and teachers.",
+            "Skolverket/Utbildningsguiden and national statistics for school-unit facts, teacher ratios and academic results.",
+            "Göteborg Stad placement statistics for municipal admission realism.",
+            "Individual fristående school pages for queue and admission rules."
+        ],
+    }
 
 
 @app.get("/api/metadata")
@@ -265,18 +434,21 @@ def metadata() -> dict[str, Any]:
         count = conn.execute("SELECT COUNT(*) AS n FROM schools").fetchone()["n"]
         last_import = conn.execute("SELECT * FROM import_log ORDER BY id DESC LIMIT 1").fetchone()
     return {
-        "version": "0.4.0",
+        "version": APP_VERSION,
         "schoolCount": count,
-        "defaultTargetYear": DEFAULT_TARGET_YEAR,
+        "defaultYearMode": DEFAULT_YEAR_MODE,
+        "currentDataYear": latest_year,
         "latestAvailableYear": latest_year,
         "availableYears": available_years,
         "lastImport": dict(last_import) if last_import else None,
-        "updateMode": "The API asks for the target year and falls back to the latest imported prior year per school.",
+        "qualityMethodVersion": QUALITY_METHOD_VERSION,
+        "qualityFormula": calculate_quality({})["qualityFormula"],
+        "updateMode": "Default mode uses the current imported data year. If a current-year record is missing for a school, the API falls back to the latest prior verified year for that school.",
     }
 
 
 @app.get("/api/schools")
-def schools_api(year: str = Query(default=str(DEFAULT_TARGET_YEAR))) -> dict[str, Any]:
+def schools_api(year: str = Query(default=DEFAULT_YEAR_MODE)) -> dict[str, Any]:
     with db() as conn:
         school_rows = conn.execute("SELECT * FROM schools ORDER BY name COLLATE NOCASE").fetchall()
         items = []
@@ -289,8 +461,13 @@ def schools_api(year: str = Query(default=str(DEFAULT_TARGET_YEAR))) -> dict[str
                 fallback_count += 1
             items.append(combine_school_and_metric(school, metric, fallback, requested_year))
         available_years = get_available_years(conn)
+        current_year = max(available_years) if available_years else None
+        resolved_year, year_mode = resolve_year_param(conn, year)
     return {
         "requestedYear": year,
+        "resolvedYear": resolved_year,
+        "yearMode": year_mode,
+        "currentDataYear": current_year,
         "availableYears": available_years,
         "fallbackCount": fallback_count,
         "count": len(items),
@@ -299,7 +476,7 @@ def schools_api(year: str = Query(default=str(DEFAULT_TARGET_YEAR))) -> dict[str
 
 
 @app.get("/api/schools/{slug}")
-def school_api(slug: str, year: str = Query(default=str(DEFAULT_TARGET_YEAR))) -> dict[str, Any]:
+def school_api(slug: str, year: str = Query(default=DEFAULT_YEAR_MODE)) -> dict[str, Any]:
     with db() as conn:
         school = conn.execute("SELECT * FROM schools WHERE slug=?", (slug,)).fetchone()
         if not school:
@@ -308,11 +485,19 @@ def school_api(slug: str, year: str = Query(default=str(DEFAULT_TARGET_YEAR))) -
         if not metric:
             raise HTTPException(status_code=404, detail="No metrics found for this school")
         history = conn.execute(
-            "SELECT year, qualityScore, admissionScore, lastVerified FROM school_year_metrics WHERE slug=? ORDER BY year DESC",
+            "SELECT year, qualityScore, admissionScore, f0Satisfaction, safety, studyPeace, support, studentSatisfaction, parentSatisfaction, academicScore, lastVerified FROM school_year_metrics WHERE slug=? ORDER BY year DESC",
             (slug,),
         ).fetchall()
     item = combine_school_and_metric(school, metric, fallback, requested_year)
-    item["history"] = [dict(row) for row in history]
+    history_items = []
+    for row in history:
+        history_dict = dict(row)
+        computed = calculate_quality(history_dict)
+        history_dict["editorialQualityScore"] = history_dict.pop("qualityScore")
+        history_dict["qualityScore"] = computed["qualityScore"]
+        history_dict["dataCompletenessPct"] = computed["dataCompletenessPct"]
+        history_items.append(history_dict)
+    item["history"] = history_items
     return item
 
 
@@ -331,4 +516,4 @@ async def import_api(request: Request) -> JSONResponse:
         count = upsert_schools(records, "manual-api-import")
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return JSONResponse({"ok": True, "imported": count, "time": now_iso()})
+    return JSONResponse({"ok": True, "imported": count, "time": now_iso(), "qualityMethodVersion": QUALITY_METHOD_VERSION})

@@ -31,9 +31,9 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "jattestensskolan",
-    "requestedDataYear": 2027
+    "academicScore": 7.4
   },
   {
     "name": "Herrgårdsskolan",
@@ -67,9 +67,9 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "herrgardsskolan",
-    "requestedDataYear": 2027
+    "academicScore": 8.2
   },
   {
     "name": "Taubeskolan",
@@ -103,9 +103,9 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "taubeskolan",
-    "requestedDataYear": 2027
+    "academicScore": 6.8
   },
   {
     "name": "Lerlyckeskolan",
@@ -139,9 +139,9 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "lerlyckeskolan",
-    "requestedDataYear": 2027
+    "academicScore": 7.4
   },
   {
     "name": "Bjurslättsskolan",
@@ -175,9 +175,9 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "bjurslattsskolan",
-    "requestedDataYear": 2027
+    "academicScore": 5.8
   },
   {
     "name": "Bräckeskolan",
@@ -211,9 +211,9 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "brackeskolan",
-    "requestedDataYear": 2027
+    "academicScore": 6.2
   },
   {
     "name": "Innovitaskolan St Jörgen",
@@ -251,9 +251,9 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "innovitaskolan-st-jorgen",
-    "requestedDataYear": 2027
+    "academicScore": 6.4
   },
   {
     "name": "Fridaskolan Kvillebäcken",
@@ -287,9 +287,9 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "fridaskolan-kvillebacken",
-    "requestedDataYear": 2027
+    "academicScore": 6.8
   },
   {
     "name": "Ebba Petterssons Privatskola",
@@ -323,9 +323,9 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "ebba-petterssons-privatskola",
-    "requestedDataYear": 2027
+    "academicScore": 8.2
   },
   {
     "name": "IES Södra Änggården",
@@ -359,9 +359,9 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "ies-sodra-anggarden",
-    "requestedDataYear": 2027
+    "academicScore": 6.5
   },
   {
     "name": "Göteborgs Högre Samskola / Lilla Samskolan",
@@ -395,9 +395,9 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "goteborgs-hogre-samskola-lilla-samskolan",
-    "requestedDataYear": 2027
+    "academicScore": 8.8
   },
   {
     "name": "ISGR",
@@ -431,9 +431,9 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "isgr",
-    "requestedDataYear": 2027
+    "academicScore": 9.0
   },
   {
     "name": "Vittra Kronhusparken",
@@ -467,9 +467,9 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "vittra-kronhusparken",
-    "requestedDataYear": 2027
+    "academicScore": 6.3
   },
   {
     "name": "Montessoriskolan Casa",
@@ -503,9 +503,9 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "montessoriskolan-casa",
-    "requestedDataYear": 2027
+    "academicScore": 7.4
   },
   {
     "name": "Montessoriskolan Centrum",
@@ -539,8 +539,8 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "montessoriskolan-centrum",
-    "requestedDataYear": 2027
+    "academicScore": 7.6
   }
 ]

@@ -16,14 +16,15 @@
         <a href="#nearby">Nearby</a>
         <a href="#compare">Compare</a>
         <a href="#guide">Guide</a>
+        <a href="#methodology">Method</a>
       </div>
     </nav>
 
     <section class="hero-content">
       <div>
-        <p class="eyebrow">MVP v0.4 · Backend + database · F0/F–9</p>
+        <p class="eyebrow">MVP v0.6 · Current-year data mode · F0/F–9</p>
         <h1>Compare Gothenburg schools with ratings, admission realism and location fit.</h1>
-        <p class="lede">For international families choosing förskoleklass and primary school in Göteborg. The app now loads school data from a backend API and automatically falls back to the latest verified year when newer data has not been imported yet.</p>
+        <p class="lede">For international families choosing förskoleklass and primary school in Göteborg. The app loads the newest imported official data year from the backend, falls back per school only when needed, and calculates quality scores from transparent weighted rating fields.</p>
         <div class="hero-actions">
           <a class="button primary" href="#nearby">Find nearby schools</a>
           <a class="button secondary" href="#compare">Compare schools</a>
@@ -34,9 +35,9 @@
         <h2 id="dataModeTitle">Loading data…</h2>
         <p id="dataModeCopy">Checking imported school-rating years.</p>
         <div class="data-steps">
-          <div><span>1</span><strong>Target 2027</strong><small>Use it when imported</small></div>
-          <div><span>2</span><strong>Fallback</strong><small>Use latest verified prior year</small></div>
-          <div><span>3</span><strong>Card badge</strong><small>Shows exact year used</small></div>
+          <div><span>1</span><strong>Current year</strong><small>Newest imported data</small></div>
+          <div><span>2</span><strong>Per-school fallback</strong><small>Only when current year is missing</small></div>
+          <div><span>3</span><strong>Computed score</strong><small>Formula and confidence shown</small></div>
         </div>
       </div>
     </section>
@@ -50,8 +51,8 @@
           <h2>School directory</h2>
         </div>
         <div class="section-note-card">
-          <strong>Default view: quality first.</strong>
-          <span>Use the sort menu for admission safety or nearby fit. Each card shows the data year used, so newer imports and fallback data are visible.</span>
+          <strong>Quality-first directory.</strong>
+          <span>Use sort options for nearby fit, admission realism, or data completeness. Each card shows source year and confidence.</span>
         </div>
       </div>
 
@@ -85,6 +86,7 @@
             <option value="quality" selected>Quality / rating</option>
             <option value="nearbyFit">Nearby fit: Långströmsgatan F0</option>
             <option value="admission">Admission realism</option>
+            <option value="confidence">Data completeness</option>
             <option value="name">Name A–Z</option>
           </select>
         </label>
@@ -132,6 +134,21 @@
       <div id="compareOutput" class="compare-output"></div>
     </section>
 
+
+    <section class="section" id="methodology">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Method</p>
+          <h2>Transparent quality scoring</h2>
+        </div>
+        <div class="section-note-card compact">
+          <strong>Quality ≠ admission chance.</strong>
+          <span>The quality score uses rating/academic indicators only. Admission realism is shown separately.</span>
+        </div>
+      </div>
+      <div id="methodologyPanel" class="methodology-panel"></div>
+    </section>
+
     <section class="section panel" id="guide">
       <div class="section-head">
         <div>
@@ -149,7 +166,7 @@
   </main>
 
   <footer class="footer">
-    <p>Built as MVP v0.4. Backend API + SQLite database + year fallback logic.</p>
+    <p>Built as MVP v0.6. Backend API + SQLite database + current-year data mode + computed quality scoring.</p>
     <p><a href="/api/metadata">API metadata</a> · <a href="/assets/README.md">README</a></p>
   </footer>
 
