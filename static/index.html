@@ -22,9 +22,9 @@
 
     <section class="hero-content">
       <div>
-        <p class="eyebrow">MVP v0.7 · Current-year data mode + Skolenkäten importer · F0/F–9</p>
+        <p class="eyebrow">MVP v0.8 · Clear source blocks + neutral school notes · F0/F–9</p>
         <h1>Compare Gothenburg schools with ratings, admission realism and location fit.</h1>
-        <p class="lede">For international families choosing förskoleklass and primary school in Göteborg. The app loads the newest imported official data year from the backend, falls back per school only when needed, and calculates quality scores from transparent weighted rating fields.</p>
+        <p class="lede">For international families choosing förskoleklass and primary school in Göteborg. The app loads the newest imported official data year from the backend, separates survey ratings, academic results and admission realism, and calculates quality scores from transparent weighted fields.</p>
         <div class="hero-actions">
           <a class="button primary" href="#nearby">Find nearby schools</a>
           <a class="button secondary" href="#compare">Compare schools</a>
@@ -51,8 +51,8 @@
           <h2>School directory</h2>
         </div>
         <div class="section-note-card">
-          <strong>Quality-first directory.</strong>
-          <span>Use sort options for nearby fit, admission realism, or data completeness. Each card shows source year and confidence.</span>
+          <strong>Default view: quality first.</strong>
+          <span>Use the sort menu to switch to admission realism, nearby fit or data completeness. Each card separates survey ratings, academic results and admission notes.</span>
         </div>
       </div>
 
@@ -84,7 +84,7 @@
           Sort by
           <select id="sortFilter">
             <option value="quality" selected>Quality / rating</option>
-            <option value="nearbyFit">Nearby fit: Långströmsgatan F0</option>
+            <option value="nearbyFit">Nearby fit: sample F0 address</option>
             <option value="admission">Admission realism</option>
             <option value="confidence">Data completeness</option>
             <option value="name">Name A–Z</option>
@@ -159,14 +159,14 @@
       <div class="guide-grid">
         <article><h3>F0 means förskoleklass</h3><p>Förskoleklass is the transition year before grade 1. Schools often list it as “F” in F–6 or F–9.</p></article>
         <article><h3>Municipal schools</h3><p>Göteborg placement uses municipal rules such as sibling priority, relative proximity, absolute proximity and lottery where needed.</p></article>
-        <article><h3>Fristående schools</h3><p>Independent schools are applied to directly. Queue date, sibling priority and sometimes own preschool priority can matter more than distance.</p></article>
+        <article><h3>Fristående schools</h3><p>Independent schools are applied to directly. Admission criteria vary by school: annual application window, queue date, sibling priority, preschool priority or other approved criteria.</p></article>
         <article><h3>Use official sources</h3><p>The app is a screening tool. Always verify with Göteborg Stad, Skolverket/Utbildningsguiden and each school before deciding.</p></article>
       </div>
     </section>
   </main>
 
   <footer class="footer">
-    <p>Built as MVP v0.7. Backend API + SQLite database + current-year data mode + computed quality scoring + Skolenkäten importer.</p>
+    <p>Built as MVP v0.8. Backend API + SQLite database + current-year data mode + Skolenkäten importer + separated survey/academic/admission sections.</p>
     <p><a href="/api/metadata">API metadata</a> · <a href="/assets/README.md">README</a></p>
   </footer>
 

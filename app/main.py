@@ -25,9 +25,9 @@ IMPORT_DIR = DATA_DIR / "imports"
 DB_PATH = Path(os.getenv("SCHOOLGUIDE_DB_PATH", DATA_DIR / "schoolguide.sqlite"))
 DEFAULT_YEAR_MODE = os.getenv("DEFAULT_YEAR_MODE", "current").strip().lower()
 BASELINE_FILE = DATA_DIR / "schools-2026.json"
-APP_VERSION = "0.7.0"
+APP_VERSION = "0.8.0"
 
-QUALITY_METHOD_VERSION = "v0.7 Skolenkäten-import-ready weighted score"
+QUALITY_METHOD_VERSION = "v0.8 separated survey, academic and admission UI"
 MISSING_VALUE_BASELINE = 6.5
 
 QUALITY_COMPONENTS = [

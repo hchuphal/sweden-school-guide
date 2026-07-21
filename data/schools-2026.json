@@ -18,7 +18,7 @@
     "studentSatisfaction": 6.9,
     "parentSatisfaction": 6.7,
     "academicSignal": "Grade 9 merit value above national average in prior check.",
-    "decisionNote": "Strong if preschool-friend continuity matters, but difficult without sibling priority.",
+    "decisionNote": "F–9 municipal option with continuity through later grades; admission can be strongly affected by sibling-priority share.",
     "sources": [
       {
         "label": "Skolverket / Utbildningsguiden",
@@ -31,7 +31,7 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "jattestensskolan",
     "academicScore": 7.4
   },
@@ -54,7 +54,7 @@
     "studentSatisfaction": 8.3,
     "parentSatisfaction": 7.4,
     "academicSignal": "Grade 6 national-test signal above national averages in prior check.",
-    "decisionNote": "Best quality signal among the main municipal options; competitive but less sibling-dominated than Jättestensskolan.",
+    "decisionNote": "Strong municipal quality signal in the Lindholmen/Norra Älvstranden area; admission is competitive.",
     "sources": [
       {
         "label": "Skolverket / Utbildningsguiden",
@@ -67,7 +67,7 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "herrgardsskolan",
     "academicScore": 8.2
   },
@@ -90,7 +90,7 @@
     "studentSatisfaction": 7.0,
     "parentSatisfaction": 4.7,
     "academicSignal": "Strong English/Swedish signal in prior check; maths slightly below national average.",
-    "decisionNote": "Best admission safety in preferred Eriksberg direction; visit because parent satisfaction is weak.",
+    "decisionNote": "Eriksberg municipal F–6 option with accessible 2026 admission signal; verify school climate and parent/student survey data.",
     "sources": [
       {
         "label": "Skolverket / Utbildningsguiden",
@@ -103,7 +103,7 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "taubeskolan",
     "academicScore": 6.8
   },
@@ -126,7 +126,7 @@
     "studentSatisfaction": 5.6,
     "parentSatisfaction": null,
     "academicSignal": "Good grade 6 national-test signal in prior check.",
-    "decisionNote": "Worth considering if moving close; watch building/pavilion uncertainty.",
+    "decisionNote": "Municipal F–6 option in the Tolered/Lerlyckan area; check any building or temporary-premises updates before ranking.",
     "sources": [
       {
         "label": "Skolverket / Utbildningsguiden",
@@ -139,7 +139,7 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "lerlyckeskolan",
     "academicScore": 7.4
   },
@@ -162,7 +162,7 @@
     "studentSatisfaction": 7.3,
     "parentSatisfaction": 4.4,
     "academicSignal": "Mixed.",
-    "decisionNote": "Realistic municipal backup; weaker F0/parent quality signal.",
+    "decisionNote": "Municipal F–6 option in Lundby/Wieselgrensplatsen; realistic admission signal but mixed rating indicators.",
     "sources": [
       {
         "label": "Skolverket / Utbildningsguiden",
@@ -175,7 +175,7 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "bjurslattsskolan",
     "academicScore": 5.8
   },
@@ -198,7 +198,7 @@
     "studentSatisfaction": 6.3,
     "parentSatisfaction": 4.9,
     "academicSignal": "Around/above national average in some grade 6 tests in prior check.",
-    "decisionNote": "Admission-safe but not quality-first; building project noted in prior research.",
+    "decisionNote": "Municipal F–6 option in Bräcke; admission signal is accessible, but rating and facility updates should be checked.",
     "sources": [
       {
         "label": "Skolverket / Utbildningsguiden",
@@ -211,7 +211,7 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "brackeskolan",
     "academicScore": 6.2
   },
@@ -226,7 +226,7 @@
     "profile": "Explore · Innovate · Balance",
     "qualityScore": 64,
     "admissionScore": 55,
-    "admissionNote": "Private queue: own preschool first, sibling priority, then application date. July 2025 queue date is useful but not guaranteed.",
+    "admissionNote": "Fristående admission: children from the school’s own preschool first, then sibling priority, then application/queue date. Confirm current queue position directly with the school.",
     "f0Satisfaction": null,
     "safety": 7.3,
     "studyPeace": 5.1,
@@ -234,7 +234,7 @@
     "studentSatisfaction": 6.2,
     "parentSatisfaction": 4.4,
     "academicSignal": "Grade 9 merit value above national average in prior check; grade 6/9 tests mixed.",
-    "decisionNote": "Serious private backup if queue is valid for F0/grundskola; not clearly better than Herrgård/Jättesten on public rating data.",
+    "decisionNote": "Fristående F–9 option in Hisings Backa/St Jörgen. Useful to compare as a private alternative, but public survey data does not automatically make it stronger than top municipal options.",
     "sources": [
       {
         "label": "Skolverket / Utbildningsguiden",
@@ -251,7 +251,7 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "innovitaskolan-st-jorgen",
     "academicScore": 6.4
   },
@@ -266,7 +266,7 @@
     "profile": "Popular private F–9",
     "qualityScore": 72,
     "admissionScore": 10,
-    "admissionNote": "Queue/date + sibling priority. User-reported queue around 400: treat as not realistic for F0 2027.",
+    "admissionNote": "Fristående admission is based on the school’s published criteria, usually application/queue date and sibling priority. Confirm current queue position directly with the school.",
     "f0Satisfaction": null,
     "safety": 6.8,
     "studyPeace": null,
@@ -274,7 +274,7 @@
     "studentSatisfaction": 6.9,
     "parentSatisfaction": 8.1,
     "academicSignal": "Good private-school reputation; verify current data before use.",
-    "decisionNote": "Good school to list in app, but not realistic for this user with queue 400.",
+    "decisionNote": "Popular fristående F–9 option in Kvillebäcken; practical admission chance depends on individual queue position and sibling priority.",
     "sources": [
       {
         "label": "Fridaskolan queue FAQ",
@@ -287,7 +287,7 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "fridaskolan-kvillebacken",
     "academicScore": 6.8
   },
@@ -302,15 +302,15 @@
     "profile": "Established private school",
     "qualityScore": 82,
     "admissionScore": 25,
-    "admissionNote": "Private admissions/queue; competitive. Verify school-specific application period.",
+    "admissionNote": "Fristående annual application: application is valid for one year, queue place is based on exact registration time, and sibling priority is applied subject to available places. Verify the current application window.",
     "f0Satisfaction": null,
     "safety": null,
     "studyPeace": null,
     "support": null,
     "studentSatisfaction": null,
     "parentSatisfaction": null,
-    "academicSignal": "Strong reputation; public ratings need import in v0.2.",
-    "decisionNote": "Important city-wide private option, but likely commute-heavy from Hisingen.",
+    "academicSignal": "Academic and survey indicators should be read together with the school’s annual admission rules.",
+    "decisionNote": "Established F–9 private school in Västra Frölunda. City-wide option; assess commute from the family’s own address.",
     "sources": [
       {
         "label": "School website",
@@ -323,7 +323,7 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "ebba-petterssons-privatskola",
     "academicScore": 8.2
   },
@@ -338,7 +338,7 @@
     "profile": "Bilingual / IES",
     "qualityScore": 70,
     "admissionScore": 40,
-    "admissionNote": "Private queue. Offers may go earlier than municipal decisions. Accepted private place should not automatically block municipal wishes if municipality is told correctly.",
+    "admissionNote": "Fristående admission through IES queue/offer process. Offers may go earlier than municipal decisions; accepted private place should be coordinated correctly with Göteborg if a municipal place is still wanted.",
     "f0Satisfaction": null,
     "safety": null,
     "studyPeace": null,
@@ -346,7 +346,7 @@
     "studentSatisfaction": null,
     "parentSatisfaction": null,
     "academicSignal": "Newer/specific campus data may be limited; verify opening-stage grades.",
-    "decisionNote": "Important expat option; check actual F0 availability for autumn 2027.",
+    "decisionNote": "English-profile fristående option; verify exact F0 availability, queue position and offer timing for the relevant school year.",
     "sources": [
       {
         "label": "IES Södra Änggården",
@@ -359,7 +359,7 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "ies-sodra-anggarden",
     "academicScore": 6.5
   },
@@ -374,7 +374,7 @@
     "profile": "High-reputation private",
     "qualityScore": 88,
     "admissionScore": 20,
-    "admissionNote": "Competitive private admissions. Some places can be reserved for preschool pipeline; verify annually.",
+    "admissionNote": "Fristående admission with school-specific criteria and annual process; verify current F0 places, preschool link and sibling-priority rules.",
     "f0Satisfaction": 8.8,
     "safety": 9.4,
     "studyPeace": null,
@@ -382,7 +382,7 @@
     "studentSatisfaction": null,
     "parentSatisfaction": null,
     "academicSignal": "Strong public rating signal from prior check.",
-    "decisionNote": "Very attractive, but low practical chance without strong queue/preschool/sibling position.",
+    "decisionNote": "High-demand central private option. Practical chance depends on the school’s annual intake and priority criteria.",
     "sources": [
       {
         "label": "Samskolan admissions",
@@ -395,7 +395,7 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "goteborgs-hogre-samskola-lilla-samskolan",
     "academicScore": 8.8
   },
@@ -410,7 +410,7 @@
     "profile": "International / Swedish-English",
     "qualityScore": 86,
     "admissionScore": 25,
-    "admissionNote": "International/specific admissions profile; verify route and criteria.",
+    "admissionNote": "International/Swedish-English profile with school-specific admission route; verify section, grade availability and criteria for F0.",
     "f0Satisfaction": null,
     "safety": null,
     "studyPeace": null,
@@ -418,7 +418,7 @@
     "studentSatisfaction": null,
     "parentSatisfaction": null,
     "academicSignal": "Strong later academic signal in prior check.",
-    "decisionNote": "Good if international profile matters; not the simplest Hisingen F0 plan.",
+    "decisionNote": "International-profile option; assess language profile, admission criteria and commute from the family’s own address.",
     "sources": [
       {
         "label": "ISGR admissions",
@@ -431,7 +431,7 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "isgr",
     "academicScore": 9.0
   },
@@ -446,7 +446,7 @@
     "profile": "Central private F–9",
     "qualityScore": 60,
     "admissionScore": 45,
-    "admissionNote": "Private queue; central commute from Hisingen possible depending route.",
+    "admissionNote": "Fristående admission/queue rules should be verified with the school for the relevant year.",
     "f0Satisfaction": null,
     "safety": 7.7,
     "studyPeace": null,
@@ -454,7 +454,7 @@
     "studentSatisfaction": 7.0,
     "parentSatisfaction": 6.3,
     "academicSignal": "Mixed public rating signal in prior check.",
-    "decisionNote": "Useful backup, not top quality-first choice.",
+    "decisionNote": "Central Göteborg fristående option; assess school profile, rating data and commute from the family’s own address.",
     "sources": [
       {
         "label": "Vittra queue",
@@ -467,7 +467,7 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "vittra-kronhusparken",
     "academicScore": 6.3
   },
@@ -482,7 +482,7 @@
     "profile": "Montessori",
     "qualityScore": 78,
     "admissionScore": 25,
-    "admissionNote": "Private Montessori criteria; own preschool and sibling factors can matter.",
+    "admissionNote": "Fristående Montessori admission criteria; own preschool and sibling factors can matter. Verify current rules directly with the school.",
     "f0Satisfaction": null,
     "safety": 8.5,
     "studyPeace": 7.0,
@@ -490,7 +490,7 @@
     "studentSatisfaction": null,
     "parentSatisfaction": 8.4,
     "academicSignal": "Good parent signal in prior check.",
-    "decisionNote": "Good if Montessori is desired; commute can be heavy from Hisingen.",
+    "decisionNote": "Montessori-profile F–9 option in Bö/central-east Göteborg; assess profile fit and commute from the family’s own address.",
     "sources": [
       {
         "label": "Casa admission principles",
@@ -503,7 +503,7 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "montessoriskolan-casa",
     "academicScore": 7.4
   },
@@ -518,7 +518,7 @@
     "profile": "Montessori",
     "qualityScore": 76,
     "admissionScore": 25,
-    "admissionNote": "Private queue; sibling/Montessori priority can matter.",
+    "admissionNote": "Fristående Montessori admission/interest process; sibling and Montessori-related priority may matter. Verify current rules directly with the school.",
     "f0Satisfaction": null,
     "safety": 8.8,
     "studyPeace": 7.1,
@@ -526,7 +526,7 @@
     "studentSatisfaction": 8.0,
     "parentSatisfaction": 7.5,
     "academicSignal": "Good public rating signal in prior check.",
-    "decisionNote": "Potentially good, but queue and commute matter.",
+    "decisionNote": "Central Montessori-profile option; assess profile fit, admission criteria and commute from the family’s own address.",
     "sources": [
       {
         "label": "Montessoriskolan Centrum interest form",
@@ -539,7 +539,7 @@
     ],
     "dataYear": 2026,
     "lastVerified": "July 2026",
-    "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+    "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "montessoriskolan-centrum",
     "academicScore": 7.6
   }

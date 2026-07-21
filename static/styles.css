@@ -123,6 +123,9 @@ input:focus, select:focus { outline: 3px solid rgba(40,75,99,.16); border-color:
   .filters, .compare-inputs { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 680px) {
+  .metric-grid { grid-template-columns: 1fr; }
+  .block-title { display: block; }
+  .block-title span { display: block; margin-top: 4px; text-align: left; }
   .nav { align-items: flex-start; }
   .nav-links { display: none; }
   .school-grid, .compare-grid, .guide-grid, .filters, .address-tool, .compare-inputs, .nearby-card { grid-template-columns: 1fr; }
@@ -150,3 +153,15 @@ input:focus, select:focus { outline: 3px solid rgba(40,75,99,.16); border-color:
 .methodology-panel { background: white; border: 1px solid var(--line); border-radius: 20px; padding: 20px; box-shadow: 0 8px 26px rgba(32,38,48,.05); }
 .methodology-panel h3 { margin-bottom: 8px; }
 .method-note { background: #f5faf7; border: 1px solid #d7e5df; border-radius: 16px; padding: 12px; }
+
+
+.insight-block { margin-top: 12px; border: 1px solid #e7efe9; border-radius: 16px; background: #fbfdfb; padding: 12px; }
+.block-title { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; margin-bottom: 8px; }
+.block-title strong { color: var(--ink); font-size: .95rem; }
+.block-title span { color: var(--muted); font-size: .78rem; font-weight: 800; text-align: right; }
+.metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.metric-cell { display: flex; justify-content: space-between; gap: 8px; padding: 7px 8px; border: 1px solid #edf0ed; background: white; border-radius: 12px; font-size: .86rem; }
+.metric-cell span { color: var(--muted); }
+.metric-cell strong { color: var(--ink); text-align: right; }
+.block-note { margin: 9px 0 0; color: var(--muted); line-height: 1.4; font-size: .84rem; }
+.sources strong { color: var(--ink); }

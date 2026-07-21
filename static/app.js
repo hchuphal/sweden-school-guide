@@ -51,9 +51,10 @@ function getPointFromAddress(input) {
 }
 
 function sourceLinks(school) {
-  return (school.sources || [])
+  const links = (school.sources || [])
     .map(src => `<a href="${escapeHtml(src.url)}" target="_blank" rel="noopener">${escapeHtml(src.label)}</a>`)
     .join(" · ");
+  return links ? `<strong>Sources:</strong> ${links}` : `<strong>Sources:</strong> Not listed`;
 }
 
 function dataFreshness(school) {
@@ -110,7 +111,7 @@ function sortNote(sortMode) {
   const notes = {
     quality: "Quality-first sorting uses the computed score. Admission chance is deliberately excluded.",
     admission: "Admission sorting ranks realistic access first. This can push easier-but-weaker schools higher.",
-    nearbyFit: "Nearby fit is a scenario score for Långströmsgatan 6 and F0, combining distance, continuity, area fit, quality and admission realism.",
+    nearbyFit: "Nearby fit is a scenario score for the address entered in the nearby section. In the MVP sort menu, the sample scenario uses Långströmsgatan 6 for F0.",
     confidence: "Data confidence sorting shows schools with the most complete rating fields first. It does not mean the school is best.",
     name: "Alphabetical sorting is useful for quickly finding a known school."
   };
@@ -131,12 +132,66 @@ function methodSummary(school) {
     .join("");
   return `
     <details class="method-details">
-      <summary>How quality score is calculated</summary>
-      <p>Computed by backend from weighted rating fields. Missing values use neutral 6.5/10 and reduce the confidence score. Admission realism is separate.</p>
+      <summary>How computed quality score is calculated</summary>
+      <p>Computed by backend from survey ratings, academic signal and data confidence. Missing values use neutral 6.5/10 and reduce the confidence score. Admission realism is separate.</p>
       <div class="method-meta"><span>${confidence}</span><span>${missing} missing field${missing === 1 ? "" : "s"}</span></div>
       ${rows}
     </details>
   `;
+}
+
+function metricCell(label, value, suffix = "/10") {
+  return `<div class="metric-cell"><span>${escapeHtml(label)}</span><strong>${fmt(value, suffix)}</strong></div>`;
+}
+
+function insightBlock(title, sourceLabel, rows, note = "") {
+  return `
+    <section class="insight-block">
+      <div class="block-title"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(sourceLabel)}</span></div>
+      <div class="metric-grid">${rows.join("")}</div>
+      ${note ? `<p class="block-note">${escapeHtml(note)}</p>` : ""}
+    </section>
+  `;
+}
+
+function surveyRatingsBlock(school) {
+  return insightBlock(
+    "1. Skolenkäten survey ratings",
+    "Parent and pupil survey data",
+    [
+      metricCell("F0 satisfaction", school.f0Satisfaction),
+      metricCell("Safety / trygghet", school.safety),
+      metricCell("Study peace / studiero", school.studyPeace),
+      metricCell("Support / stöd", school.support),
+      metricCell("Student satisfaction", school.studentSatisfaction),
+      metricCell("Parent satisfaction", school.parentSatisfaction),
+    ],
+    "Survey values are shown where published for the school/year. Missing values reduce data confidence."
+  );
+}
+
+function academicBlock(school) {
+  return insightBlock(
+    "2. Academic results",
+    "Separate from Skolenkäten",
+    [
+      metricCell("Academic score", school.academicScore, "/10"),
+      metricCell("Quality contribution", school.qualityBreakdown?.find(x => x.key === "academicScore")?.contribution, " pts"),
+    ],
+    school.academicSignal || "Academic indicator not yet imported for this school."
+  );
+}
+
+function admissionBlock(school) {
+  return insightBlock(
+    "3. Admission realism",
+    "Separate from quality score",
+    [
+      metricCell("Admission realism", school.admissionScore, "/100"),
+      metricCell("Data confidence", school.dataCompletenessPct, "%"),
+    ],
+    school.admissionNote || "Admission rules should be verified with the school or municipality."
+  );
 }
 
 function schoolCard(school) {
@@ -156,12 +211,11 @@ function schoolCard(school) {
       </div>
       ${dataFreshness(school)}
       <div class="metric-row"><span>Computed quality score</span><strong>${fmt(school.qualityScore)}/100</strong></div>
-      <div class="metric-row"><span>Admission realism</span><strong>${fmt(school.admissionScore)}/100</strong></div>
-      <div class="metric-row"><span>F0 satisfaction</span><strong>${fmt(school.f0Satisfaction)}/10</strong></div>
-      <div class="metric-row"><span>Safety / trygghet</span><strong>${fmt(school.safety)}/10</strong></div>
+      ${surveyRatingsBlock(school)}
+      ${academicBlock(school)}
+      ${admissionBlock(school)}
       ${methodSummary(school)}
       <p class="decision-note">${escapeHtml(school.decisionNote || "")}</p>
-      <p class="admission-note">${escapeHtml(school.admissionNote || "")}</p>
       <p class="sources">${sourceLinks(school)}</p>
     </article>
   `;
@@ -240,11 +294,12 @@ function compareCard(school) {
       <p class="card-meta">${escapeHtml(school.type)} · ${escapeHtml(school.grades)} · ${escapeHtml(school.area)}</p>
       ${dataFreshness(school)}
       <div class="metric-row"><span>Computed quality</span><strong>${fmt(school.qualityScore)}/100</strong></div>
-      <div class="metric-row"><span>Admission</span><strong>${fmt(school.admissionScore)}/100</strong></div>
-      <div class="metric-row"><span>F0 satisfaction</span><strong>${fmt(school.f0Satisfaction)}/10</strong></div>
-      <div class="metric-row"><span>Parent satisfaction</span><strong>${fmt(school.parentSatisfaction)}/10</strong></div>
+      ${surveyRatingsBlock(school)}
+      ${academicBlock(school)}
+      ${admissionBlock(school)}
       ${methodSummary(school)}
       <p class="decision-note">${escapeHtml(school.decisionNote || "")}</p>
+      <p class="sources">${sourceLinks(school)}</p>
     </article>
   `;
 }
@@ -293,7 +348,7 @@ function renderMethodology() {
     .join("");
   $("methodologyPanel").innerHTML = `
     <h3>Quality score formula</h3>
-    <p>The score is calculated by the backend from raw rating fields. Admission realism is intentionally excluded so schools are not ranked higher just because they are easier to get into.</p>
+    <p>The score is calculated by the backend from three separated source blocks in the UI: Skolenkäten survey ratings, academic results and data confidence. Admission realism is intentionally excluded so schools are not ranked higher just because they are easier to get into.</p>
     <div class="method-list">${rows}</div>
     <div class="method-row available"><span>Data confidence</span><strong>${fmt(formula.dataConfidenceWeight, "%")}</strong></div>
     <p class="method-note">Missing rating values use neutral ${fmt(formula.missingValueBaseline, "/10")} and reduce the confidence label. This prevents a school with missing data from looking either unfairly excellent or unfairly poor.</p>

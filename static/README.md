@@ -1,16 +1,18 @@
-# Gothenburg School Guide MVP v0.7
+# Gothenburg School Guide MVP v0.8
 
-A Render-ready FastAPI web app for comparing Gothenburg schools for expat families choosing F0/förskoleklass through F–9.
+A Render-ready FastAPI web app for comparing Gothenburg schools for families choosing F0/förskoleklass through F–9.
 
-## What v0.7 adds
+## What v0.8 adds
 
-- Backend + SQLite database from v0.6 retained.
-- Current-year data mode retained: the app uses the newest imported year and falls back per school only when the current year is missing.
-- Quality score is computed by the backend, not manually sorted.
-- **Skolinspektionen Skolenkäten importer added.**
-- A prebuilt `data/imports/schools-2026-skolenkaten.json` import is included, generated from the official Skolenkäten 2026 Excel files.
-- CLI script: `scripts/import_skolenkaten.py`.
-- Admin endpoint: `POST /api/admin/import/skolenkaten?year=2026&apply=true`.
+- Keeps backend + SQLite database + current-year data mode from v0.7.
+- Keeps the Skolinspektionen Skolenkäten importer from v0.7.
+- Makes every school card clearer by separating information into three visible blocks:
+  1. **Skolenkäten survey ratings**
+  2. **Academic results**
+  3. **Admission realism**
+- Adds `Sources:` before the source links at the bottom of every school card.
+- Rewrites subjective or address-specific text into neutral, city-wide wording.
+- Corrects Ebba Petterssons Privatskola admission wording: annual application, queue place based on exact registration time, no multi-year queue carryover unless a new application is submitted in the next application period.
 
 ## Important source model
 
@@ -22,9 +24,9 @@ The app separates source types:
 | School-unit facts and displayed school pages | Skolverket / Utbildningsguiden |
 | Academic indicators | Skolverket / Utbildningsguiden / national statistics |
 | Municipal admission realism | Göteborg Stad placement statistics |
-| Private-school queue rules | Each private school's own admission page |
+| Fristående/private admission rules | Each school's own admission page |
 
-Skolenkäten survey fields imported in v0.7 include:
+Skolenkäten survey fields shown in v0.8 include:
 
 - F0 guardian satisfaction
 - Safety / trygghet
@@ -33,20 +35,20 @@ Skolenkäten survey fields imported in v0.7 include:
 - Grade 5 or grade 8 pupil satisfaction
 - Guardian satisfaction for grundskola
 
-Academic score and admission realism are **not** overwritten by the Skolenkäten importer.
+Academic score and admission realism are **not** Skolenkäten survey values and are shown separately.
 
 ## Current import behavior
 
 For the 15 seeded schools, the included Skolenkäten 2026 import matched 11 schools by `skolenhetskod`.
 
-Schools not matched in the 2026 Skolenkäten Excel files keep their existing verified values and confidence/missing-data treatment:
+Schools not matched in the 2026 Skolenkäten Excel files keep existing verified/seeded values and confidence/missing-data treatment:
 
 - Innovitaskolan St Jörgen
 - IES Södra Änggården
 - Göteborgs Högre Samskola / Lilla Samskolan
 - Vittra Kronhusparken
 
-That can happen when a school did not participate in that Skolenkäten year, has no published row in that file, or uses another/reporting unit.
+That can happen when a school did not participate in that Skolenkäten year, has no published row in that file, or uses another reporting unit.
 
 ## Run locally
 
@@ -112,4 +114,4 @@ This is still an MVP. It is not yet a fully automated Skolverket/Göteborg impor
 - Göteborg placement-stat parser
 - proper PostgreSQL instead of SQLite for production persistence
 - real geocoding and route distance
-- separate year trends in the UI
+- year trend UI
