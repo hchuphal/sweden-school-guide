@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gothenburg School Guide</title>
+  <meta name="description" content="School-choice guide for expat families in Gothenburg." />
+  <link rel="stylesheet" href="/assets/styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <nav class="nav">
+      <div class="brand"><span class="brand-mark">G</span><span>Gothenburg School Guide</span></div>
+      <div class="nav-links">
+        <a href="#directory">Directory</a>
+        <a href="#nearby">Nearby</a>
+        <a href="#compare">Compare</a>
+        <a href="#guide">Guide</a>
+      </div>
+    </nav>
+
+    <section class="hero-content">
+      <div>
+        <p class="eyebrow">MVP v0.4 · Backend + database · F0/F–9</p>
+        <h1>Compare Gothenburg schools with ratings, admission realism and location fit.</h1>
+        <p class="lede">For international families choosing förskoleklass and primary school in Göteborg. The app now loads school data from a backend API and automatically falls back to the latest verified year when newer data has not been imported yet.</p>
+        <div class="hero-actions">
+          <a class="button primary" href="#nearby">Find nearby schools</a>
+          <a class="button secondary" href="#compare">Compare schools</a>
+        </div>
+      </div>
+      <div class="hero-card">
+        <p class="card-label">Data mode</p>
+        <h2 id="dataModeTitle">Loading data…</h2>
+        <p id="dataModeCopy">Checking imported school-rating years.</p>
+        <div class="data-steps">
+          <div><span>1</span><strong>Target 2027</strong><small>Use it when imported</small></div>
+          <div><span>2</span><strong>Fallback</strong><small>Use latest verified prior year</small></div>
+          <div><span>3</span><strong>Card badge</strong><small>Shows exact year used</small></div>
+        </div>
+      </div>
+    </section>
+  </header>
+
+  <main>
+    <section class="section" id="directory">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Directory</p>
+          <h2>School directory</h2>
+        </div>
+        <div class="section-note-card">
+          <strong>Default view: quality first.</strong>
+          <span>Use the sort menu for admission safety or nearby fit. Each card shows the data year used, so newer imports and fallback data are visible.</span>
+        </div>
+      </div>
+
+      <div id="fallbackBanner" class="notice" hidden></div>
+
+      <div class="filters">
+        <label>
+          School search
+          <input id="schoolSearch" type="search" placeholder="Search by school name, area, profile…" />
+        </label>
+        <label>
+          Type
+          <select id="typeFilter">
+            <option value="all">All types</option>
+            <option value="Municipal">Municipal</option>
+            <option value="Fristående">Fristående / private</option>
+          </select>
+        </label>
+        <label>
+          Grade coverage
+          <select id="gradeFilter">
+            <option value="all">All</option>
+            <option value="F–6">F–6</option>
+            <option value="F–9">F–9</option>
+            <option value="6–9">6–9</option>
+          </select>
+        </label>
+        <label>
+          Sort by
+          <select id="sortFilter">
+            <option value="quality" selected>Quality / rating</option>
+            <option value="nearbyFit">Nearby fit: Långströmsgatan F0</option>
+            <option value="admission">Admission realism</option>
+            <option value="name">Name A–Z</option>
+          </select>
+        </label>
+      </div>
+      <p id="sortNote" class="sort-note"></p>
+      <div id="schoolGrid" class="school-grid"></div>
+    </section>
+
+    <section class="section panel" id="nearby">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Address search</p>
+          <h2>Find nearby realistic options</h2>
+        </div>
+        <div class="section-note-card compact">
+          <strong>MVP distance model.</strong>
+          <span>Uses built-in Gothenburg coordinates and straight-line distance. Route distance/geocoding comes next.</span>
+        </div>
+      </div>
+
+      <div class="address-tool">
+        <label>
+          Enter an address
+          <input id="addressInput" type="text" value="Långströmsgatan 6, Göteborg" placeholder="Example: Långströmsgatan 6, Göteborg" />
+        </label>
+        <button id="findNearbyBtn" class="button primary" type="button">Find schools</button>
+      </div>
+      <div id="nearbyResults" class="nearby-results"></div>
+    </section>
+
+    <section class="section" id="compare">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Comparison</p>
+          <h2>Compare up to three schools</h2>
+        </div>
+      </div>
+      <div class="compare-inputs">
+        <input class="compareSchool" list="schoolNames" value="Jättestensskolan" />
+        <input class="compareSchool" list="schoolNames" value="Herrgårdsskolan" />
+        <input class="compareSchool" list="schoolNames" value="Innovitaskolan St Jörgen" />
+        <datalist id="schoolNames"></datalist>
+        <button id="compareBtn" class="button primary" type="button">Compare</button>
+      </div>
+      <div id="compareOutput" class="compare-output"></div>
+    </section>
+
+    <section class="section panel" id="guide">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Expat guide</p>
+          <h2>How Swedish school choice works</h2>
+        </div>
+      </div>
+      <div class="guide-grid">
+        <article><h3>F0 means förskoleklass</h3><p>Förskoleklass is the transition year before grade 1. Schools often list it as “F” in F–6 or F–9.</p></article>
+        <article><h3>Municipal schools</h3><p>Göteborg placement uses municipal rules such as sibling priority, relative proximity, absolute proximity and lottery where needed.</p></article>
+        <article><h3>Fristående schools</h3><p>Independent schools are applied to directly. Queue date, sibling priority and sometimes own preschool priority can matter more than distance.</p></article>
+        <article><h3>Use official sources</h3><p>The app is a screening tool. Always verify with Göteborg Stad, Skolverket/Utbildningsguiden and each school before deciding.</p></article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Built as MVP v0.4. Backend API + SQLite database + year fallback logic.</p>
+    <p><a href="/api/metadata">API metadata</a> · <a href="/assets/README.md">README</a></p>
+  </footer>
+
+  <script src="/assets/app.js"></script>
+</body>
+</html>

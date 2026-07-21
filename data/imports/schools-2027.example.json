@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Jättestensskolan",
+    "type": "Municipal",
+    "grades": "F–9",
+    "area": "Jättesten / Biskopsgården side",
+    "address": "Norrviksgatan 1, Göteborg",
+    "lat": 57.7219,
+    "lng": 11.8988,
+    "profile": "Local continuity, F–9",
+    "qualityScore": 74,
+    "admissionScore": 48,
+    "admissionNote": "2026: 48% first-choice placement; 64% sibling-priority share among placed pupils.",
+    "f0Satisfaction": 7.4,
+    "safety": 7.0,
+    "studyPeace": 7.1,
+    "support": null,
+    "studentSatisfaction": 6.9,
+    "parentSatisfaction": 6.7,
+    "academicSignal": "Grade 9 merit value above national average in prior check.",
+    "decisionNote": "Strong if preschool-friend continuity matters, but difficult without sibling priority.",
+    "sources": [
+      {
+        "label": "Skolverket / Utbildningsguiden",
+        "url": "https://utbildningsguiden.skolverket.se/skolenhet?schoolUnitID=55124975"
+      },
+      {
+        "label": "Göteborg placement statistics",
+        "url": "https://goteborg.se/wps/portal?uri=gbglnk%3A20198213310779"
+      }
+    ],
+    "dataYear": 2027,
+    "lastVerified": "After official 2027 import",
+    "verificationNote": "Example only. Replace with official 2027 source values before importing.",
+    "slug": "jattestensskolan",
+    "requestedDataYear": 2027
+  }
+]

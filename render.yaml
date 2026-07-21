@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: gothenburg-school-guide
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: SCHOOLGUIDE_DB_PATH
+        value: data/schoolguide.sqlite
+      - key: DEFAULT_TARGET_YEAR
+        value: "2027"
