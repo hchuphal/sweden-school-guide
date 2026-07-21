@@ -1,0 +1,906 @@
+{
+  "metadata": {
+    "year": 2026,
+    "sourcePage": "https://www.skolinspektionen.se/skolenkaten/resultat-fran-skolenkaten/resultat-skolenkaten-2026/",
+    "matchedSchools": 11,
+    "totalSchools": 15,
+    "unmatchedSchools": [
+      "Innovitaskolan St Jörgen",
+      "IES Södra Änggården",
+      "Göteborgs Högre Samskola / Lilla Samskolan",
+      "Vittra Kronhusparken"
+    ],
+    "sourceFiles": {
+      "f0_guardians": "/mnt/data/gothenburg-school-guide-v0.7/data/source_cache/skolenkaten/2026/skolenkaten-vardnadshavare-forskoleklass-2026.xlsx",
+      "grade5_pupils": "/mnt/data/gothenburg-school-guide-v0.7/data/source_cache/skolenkaten/2026/skolenkaten-elever-grundskola-ak-5-2026.xlsx",
+      "grade8_pupils": "/mnt/data/gothenburg-school-guide-v0.7/data/source_cache/skolenkaten/2026/skolenkaten-elever-grundskola-ak-8-2026.xlsx",
+      "school_guardians": "/mnt/data/gothenburg-school-guide-v0.7/data/source_cache/skolenkaten/2026/skolenkaten-vardnadshavare-grundskola-ak-1-9-2026.xlsx"
+    },
+    "note": "Skolenkäten survey fields were imported where skolenhetskod matched. Missing/suppressed cells are kept as null. Academic scores and admission realism are not changed by this importer."
+  },
+  "schools": [
+    {
+      "name": "Jättestensskolan",
+      "type": "Municipal",
+      "grades": "F–9",
+      "area": "Jättesten / Biskopsgården side",
+      "address": "Norrviksgatan 1, Göteborg",
+      "lat": 57.7219,
+      "lng": 11.8988,
+      "profile": "Local continuity, F–9",
+      "qualityScore": 74,
+      "admissionScore": 48,
+      "admissionNote": "2026: 48% first-choice placement; 64% sibling-priority share among placed pupils.",
+      "f0Satisfaction": 7.4,
+      "safety": 7.2,
+      "studyPeace": 7.0,
+      "support": 7.1,
+      "studentSatisfaction": 6.8,
+      "parentSatisfaction": 6.7,
+      "academicSignal": "Grade 9 merit value above national average in prior check.",
+      "decisionNote": "Strong if preschool-friend continuity matters, but difficult without sibling priority.",
+      "sources": [
+        {
+          "label": "Skolverket / Utbildningsguiden",
+          "url": "https://utbildningsguiden.skolverket.se/skolenhet?schoolUnitID=55124975"
+        },
+        {
+          "label": "Göteborg placement statistics",
+          "url": "https://goteborg.se/wps/portal?uri=gbglnk%3A20198213310779"
+        },
+        {
+          "label": "Skolinspektionen Skolenkäten 2026",
+          "url": "https://www.skolinspektionen.se/skolenkaten/resultat-fran-skolenkaten/resultat-skolenkaten-2026/"
+        }
+      ],
+      "dataYear": 2026,
+      "lastVerified": "2026-05-28",
+      "verificationNote": "Skolenkäten 2026, imported from official Excel files. Survey fields imported by skolenhetskod 55124975. Academic and admission fields remain from their existing sources. Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+      "slug": "jattestensskolan",
+      "academicScore": 7.4,
+      "schoolUnitId": 55124975,
+      "surveyImportStatus": "matched",
+      "surveySourceDetails": {
+        "schoolUnitId": 55124975,
+        "f0Guardians": {
+          "sourceSchoolName": "Jättestensskolan F-9",
+          "groupSize": 51,
+          "responseCount": 18,
+          "responseRate": 0.4
+        },
+        "grade5Pupils": {
+          "sourceSchoolName": "Jättestensskolan F-9",
+          "groupSize": 51,
+          "responseCount": 39,
+          "responseRate": 0.8
+        },
+        "grade8Pupils": {
+          "sourceSchoolName": "Jättestensskolan F-9",
+          "groupSize": 79,
+          "responseCount": 68,
+          "responseRate": 0.9
+        },
+        "schoolGuardians": {
+          "sourceSchoolName": "Jättestensskolan F-9",
+          "groupSize": 566,
+          "responseCount": 92,
+          "responseRate": 0.2
+        }
+      }
+    },
+    {
+      "name": "Herrgårdsskolan",
+      "type": "Municipal",
+      "grades": "F–6",
+      "area": "Lindholmen / Norra Älvstranden",
+      "address": "Ceresgatan 16, Göteborg",
+      "lat": 57.7089,
+      "lng": 11.9398,
+      "profile": "Lindholmen-side municipal",
+      "qualityScore": 84,
+      "admissionScore": 52,
+      "admissionNote": "2026: 52% first-choice placement; 25% sibling-priority share among placed pupils.",
+      "f0Satisfaction": 7.5,
+      "safety": 7.3,
+      "studyPeace": 6.3,
+      "support": 7.0,
+      "studentSatisfaction": 8.3,
+      "parentSatisfaction": 7.4,
+      "academicSignal": "Grade 6 national-test signal above national averages in prior check.",
+      "decisionNote": "Best quality signal among the main municipal options; competitive but less sibling-dominated than Jättestensskolan.",
+      "sources": [
+        {
+          "label": "Skolverket / Utbildningsguiden",
+          "url": "https://utbildningsguiden.skolverket.se/skolenhet?schoolUnitID=62479729"
+        },
+        {
+          "label": "Göteborg placement statistics",
+          "url": "https://goteborg.se/wps/portal?uri=gbglnk%3A20198213310779"
+        },
+        {
+          "label": "Skolinspektionen Skolenkäten 2026",
+          "url": "https://www.skolinspektionen.se/skolenkaten/resultat-fran-skolenkaten/resultat-skolenkaten-2026/"
+        }
+      ],
+      "dataYear": 2026,
+      "lastVerified": "2026-05-28",
+      "verificationNote": "Skolenkäten 2026, imported from official Excel files. Survey fields imported by skolenhetskod 62479729. Academic and admission fields remain from their existing sources. Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+      "slug": "herrgardsskolan",
+      "academicScore": 8.2,
+      "schoolUnitId": 62479729,
+      "surveyImportStatus": "matched",
+      "surveySourceDetails": {
+        "schoolUnitId": 62479729,
+        "f0Guardians": {
+          "sourceSchoolName": "Herrgårdsskolan F-6",
+          "groupSize": 50,
+          "responseCount": 12,
+          "responseRate": 0.2
+        },
+        "grade5Pupils": {
+          "sourceSchoolName": "Herrgårdsskolan F-6",
+          "groupSize": 48,
+          "responseCount": 41,
+          "responseRate": 0.9
+        },
+        "grade8Pupils": null,
+        "schoolGuardians": {
+          "sourceSchoolName": "Herrgårdsskolan F-6",
+          "groupSize": 324,
+          "responseCount": 52,
+          "responseRate": 0.2
+        }
+      }
+    },
+    {
+      "name": "Taubeskolan",
+      "type": "Municipal",
+      "grades": "F–6",
+      "area": "Västra Eriksberg",
+      "address": "Astris Gata 5, Göteborg",
+      "lat": 57.7015,
+      "lng": 11.9067,
+      "profile": "Eriksberg municipal",
+      "qualityScore": 66,
+      "admissionScore": 100,
+      "admissionNote": "2026: 100% first-choice placement; 21% sibling-priority share among placed pupils.",
+      "f0Satisfaction": null,
+      "safety": 5.3,
+      "studyPeace": 2.3,
+      "support": 6.9,
+      "studentSatisfaction": 7.0,
+      "parentSatisfaction": 4.7,
+      "academicSignal": "Strong English/Swedish signal in prior check; maths slightly below national average.",
+      "decisionNote": "Best admission safety in preferred Eriksberg direction; visit because parent satisfaction is weak.",
+      "sources": [
+        {
+          "label": "Skolverket / Utbildningsguiden",
+          "url": "https://utbildningsguiden.skolverket.se/skolenhet?schoolUnitID=11099088"
+        },
+        {
+          "label": "Göteborg placement statistics",
+          "url": "https://goteborg.se/wps/portal?uri=gbglnk%3A20198213310779"
+        },
+        {
+          "label": "Skolinspektionen Skolenkäten 2026",
+          "url": "https://www.skolinspektionen.se/skolenkaten/resultat-fran-skolenkaten/resultat-skolenkaten-2026/"
+        }
+      ],
+      "dataYear": 2026,
+      "lastVerified": "2026-05-28",
+      "verificationNote": "Skolenkäten 2026, imported from official Excel files. Survey fields imported by skolenhetskod 11099088. Academic and admission fields remain from their existing sources. Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+      "slug": "taubeskolan",
+      "academicScore": 6.8,
+      "schoolUnitId": 11099088,
+      "surveyImportStatus": "matched",
+      "surveySourceDetails": {
+        "schoolUnitId": 11099088,
+        "f0Guardians": {
+          "sourceSchoolName": "Taubeskolan F-6",
+          "groupSize": 48,
+          "responseCount": 8,
+          "responseRate": 0.2
+        },
+        "grade5Pupils": {
+          "sourceSchoolName": "Taubeskolan F-6",
+          "groupSize": 50,
+          "responseCount": 50,
+          "responseRate": 1.0
+        },
+        "grade8Pupils": null,
+        "schoolGuardians": {
+          "sourceSchoolName": "Taubeskolan F-6",
+          "groupSize": 280,
+          "responseCount": 25,
+          "responseRate": 0.1
+        }
+      }
+    },
+    {
+      "name": "Lerlyckeskolan",
+      "type": "Municipal",
+      "grades": "F–6",
+      "area": "Tolered / Slättadamm side",
+      "address": "Lerlyckegatan, Göteborg",
+      "lat": 57.7262,
+      "lng": 11.9311,
+      "profile": "Potential move-area option",
+      "qualityScore": 70,
+      "admissionScore": 63,
+      "admissionNote": "2026: 63% first-choice placement; 48% sibling-priority share among placed pupils.",
+      "f0Satisfaction": 7.0,
+      "safety": 7.6,
+      "studyPeace": 6.2,
+      "support": 6.6,
+      "studentSatisfaction": 5.6,
+      "parentSatisfaction": 6.7,
+      "academicSignal": "Good grade 6 national-test signal in prior check.",
+      "decisionNote": "Worth considering if moving close; watch building/pavilion uncertainty.",
+      "sources": [
+        {
+          "label": "Skolverket / Utbildningsguiden",
+          "url": "https://utbildningsguiden.skolverket.se/skolenhet?schoolUnitID=48653651"
+        },
+        {
+          "label": "Göteborg placement statistics",
+          "url": "https://goteborg.se/wps/portal?uri=gbglnk%3A20198213310779"
+        },
+        {
+          "label": "Skolinspektionen Skolenkäten 2026",
+          "url": "https://www.skolinspektionen.se/skolenkaten/resultat-fran-skolenkaten/resultat-skolenkaten-2026/"
+        }
+      ],
+      "dataYear": 2026,
+      "lastVerified": "2026-05-28",
+      "verificationNote": "Skolenkäten 2026, imported from official Excel files. Survey fields imported by skolenhetskod 48653651. Academic and admission fields remain from their existing sources. Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+      "slug": "lerlyckeskolan",
+      "academicScore": 7.4,
+      "schoolUnitId": 48653651,
+      "surveyImportStatus": "matched",
+      "surveySourceDetails": {
+        "schoolUnitId": 48653651,
+        "f0Guardians": {
+          "sourceSchoolName": "Lerlyckeskolan F-6",
+          "groupSize": 52,
+          "responseCount": 28,
+          "responseRate": 0.5
+        },
+        "grade5Pupils": {
+          "sourceSchoolName": "Lerlyckeskolan F-6",
+          "groupSize": 49,
+          "responseCount": 37,
+          "responseRate": 0.8
+        },
+        "grade8Pupils": null,
+        "schoolGuardians": {
+          "sourceSchoolName": "Lerlyckeskolan F-6",
+          "groupSize": 318,
+          "responseCount": 104,
+          "responseRate": 0.3
+        }
+      }
+    },
+    {
+      "name": "Bjurslättsskolan",
+      "type": "Municipal",
+      "grades": "F–6",
+      "area": "Wieselgrensplatsen / Lundby",
+      "address": "Wieselgrensgatan 11, Göteborg",
+      "lat": 57.7259,
+      "lng": 11.9329,
+      "profile": "Lundby backup",
+      "qualityScore": 58,
+      "admissionScore": 92,
+      "admissionNote": "2026: 92% first-choice placement; 23% sibling-priority share among placed pupils.",
+      "f0Satisfaction": 5.2,
+      "safety": 6.4,
+      "studyPeace": 5.6,
+      "support": 6.3,
+      "studentSatisfaction": 7.3,
+      "parentSatisfaction": 4.4,
+      "academicSignal": "Mixed.",
+      "decisionNote": "Realistic municipal backup; weaker F0/parent quality signal.",
+      "sources": [
+        {
+          "label": "Skolverket / Utbildningsguiden",
+          "url": "https://utbildningsguiden.skolverket.se/skolenhet?schoolUnitID=37407044"
+        },
+        {
+          "label": "Göteborg placement statistics",
+          "url": "https://goteborg.se/wps/portal?uri=gbglnk%3A20198213310779"
+        },
+        {
+          "label": "Skolinspektionen Skolenkäten 2026",
+          "url": "https://www.skolinspektionen.se/skolenkaten/resultat-fran-skolenkaten/resultat-skolenkaten-2026/"
+        }
+      ],
+      "dataYear": 2026,
+      "lastVerified": "2026-05-28",
+      "verificationNote": "Skolenkäten 2026, imported from official Excel files. Survey fields imported by skolenhetskod 37407044. Academic and admission fields remain from their existing sources. Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+      "slug": "bjurslattsskolan",
+      "academicScore": 5.8,
+      "schoolUnitId": 37407044,
+      "surveyImportStatus": "matched",
+      "surveySourceDetails": {
+        "schoolUnitId": 37407044,
+        "f0Guardians": {
+          "sourceSchoolName": "Bjurslättsskolan F-6",
+          "groupSize": 76,
+          "responseCount": 38,
+          "responseRate": 0.5
+        },
+        "grade5Pupils": {
+          "sourceSchoolName": "Bjurslättsskolan F-6",
+          "groupSize": 75,
+          "responseCount": 66,
+          "responseRate": 0.9
+        },
+        "grade8Pupils": null,
+        "schoolGuardians": {
+          "sourceSchoolName": "Bjurslättsskolan F-6",
+          "groupSize": 475,
+          "responseCount": 149,
+          "responseRate": 0.3
+        }
+      }
+    },
+    {
+      "name": "Bräckeskolan",
+      "type": "Municipal",
+      "grades": "F–6",
+      "area": "Bräcke",
+      "address": "Tönsbergsgatan 8, Göteborg",
+      "lat": 57.7112,
+      "lng": 11.8918,
+      "profile": "Close municipal backup",
+      "qualityScore": 55,
+      "admissionScore": 97,
+      "admissionNote": "2026: 97% first-choice placement; 29% sibling-priority share among placed pupils.",
+      "f0Satisfaction": null,
+      "safety": 6.7,
+      "studyPeace": 3.3,
+      "support": 4.7,
+      "studentSatisfaction": 6.3,
+      "parentSatisfaction": 4.9,
+      "academicSignal": "Around/above national average in some grade 6 tests in prior check.",
+      "decisionNote": "Admission-safe but not quality-first; building project noted in prior research.",
+      "sources": [
+        {
+          "label": "Skolverket / Utbildningsguiden",
+          "url": "https://utbildningsguiden.skolverket.se/skolenhet?schoolUnitID=29466561"
+        },
+        {
+          "label": "Göteborg placement statistics",
+          "url": "https://goteborg.se/wps/portal?uri=gbglnk%3A20198213310779"
+        },
+        {
+          "label": "Skolinspektionen Skolenkäten 2026",
+          "url": "https://www.skolinspektionen.se/skolenkaten/resultat-fran-skolenkaten/resultat-skolenkaten-2026/"
+        }
+      ],
+      "dataYear": 2026,
+      "lastVerified": "2026-05-28",
+      "verificationNote": "Skolenkäten 2026, imported from official Excel files. Survey fields imported by skolenhetskod 29466561. Academic and admission fields remain from their existing sources. Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+      "slug": "brackeskolan",
+      "academicScore": 6.2,
+      "schoolUnitId": 29466561,
+      "surveyImportStatus": "matched",
+      "surveySourceDetails": {
+        "schoolUnitId": 29466561,
+        "f0Guardians": {
+          "sourceSchoolName": "Bräckeskolan F-6",
+          "groupSize": 92,
+          "responseCount": 6,
+          "responseRate": 0.1
+        },
+        "grade5Pupils": {
+          "sourceSchoolName": "Bräckeskolan F-6",
+          "groupSize": 80,
+          "responseCount": 53,
+          "responseRate": 0.7
+        },
+        "grade8Pupils": null,
+        "schoolGuardians": {
+          "sourceSchoolName": "Bräckeskolan F-6",
+          "groupSize": 437,
+          "responseCount": 84,
+          "responseRate": 0.2
+        }
+      }
+    },
+    {
+      "name": "Innovitaskolan St Jörgen",
+      "type": "Fristående",
+      "grades": "F–9",
+      "area": "Hisings Backa / St Jörgen",
+      "address": "Sankt Jörgens Väg 18A, Göteborg",
+      "lat": 57.7508,
+      "lng": 11.9445,
+      "profile": "Explore · Innovate · Balance",
+      "qualityScore": 64,
+      "admissionScore": 55,
+      "admissionNote": "Private queue: own preschool first, sibling priority, then application date. July 2025 queue date is useful but not guaranteed.",
+      "f0Satisfaction": null,
+      "safety": 7.3,
+      "studyPeace": 5.1,
+      "support": null,
+      "studentSatisfaction": 6.2,
+      "parentSatisfaction": 4.4,
+      "academicSignal": "Grade 9 merit value above national average in prior check; grade 6/9 tests mixed.",
+      "decisionNote": "Serious private backup if queue is valid for F0/grundskola; not clearly better than Herrgård/Jättesten on public rating data.",
+      "sources": [
+        {
+          "label": "Skolverket / Utbildningsguiden",
+          "url": "https://utbildningsguiden.skolverket.se/skolenhet?schoolUnitID=27265374"
+        },
+        {
+          "label": "Innovitaskolan admissions",
+          "url": "https://innovitaskolan.se/st-jorgen/antagning/"
+        },
+        {
+          "label": "Innovitaskolan queue",
+          "url": "https://innovitaskolan.se/st-jorgen/koanmalan/"
+        }
+      ],
+      "dataYear": 2026,
+      "lastVerified": "July 2026",
+      "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+      "slug": "innovitaskolan-st-jorgen",
+      "academicScore": 6.4,
+      "schoolUnitId": 27265374,
+      "surveyImportStatus": "not-found-in-skolenkaten-files"
+    },
+    {
+      "name": "Fridaskolan Kvillebäcken",
+      "type": "Fristående",
+      "grades": "F–9",
+      "area": "Kvillebäcken",
+      "address": "Grimboåsen 22A, Göteborg",
+      "lat": 57.7285,
+      "lng": 11.9487,
+      "profile": "Popular private F–9",
+      "qualityScore": 72,
+      "admissionScore": 10,
+      "admissionNote": "Queue/date + sibling priority. User-reported queue around 400: treat as not realistic for F0 2027.",
+      "f0Satisfaction": 9.0,
+      "safety": 8.7,
+      "studyPeace": 7.7,
+      "support": 8.5,
+      "studentSatisfaction": 6.9,
+      "parentSatisfaction": 8.1,
+      "academicSignal": "Good private-school reputation; verify current data before use.",
+      "decisionNote": "Good school to list in app, but not realistic for this user with queue 400.",
+      "sources": [
+        {
+          "label": "Fridaskolan queue FAQ",
+          "url": "https://fridautbildning.se/vanlig-fraga/hur-staller-man-sig-i-ko-till-frida-och-hur-fungerar-det/"
+        },
+        {
+          "label": "Skolverket / Utbildningsguiden",
+          "url": "https://utbildningsguiden.skolverket.se/"
+        },
+        {
+          "label": "Skolinspektionen Skolenkäten 2026",
+          "url": "https://www.skolinspektionen.se/skolenkaten/resultat-fran-skolenkaten/resultat-skolenkaten-2026/"
+        }
+      ],
+      "dataYear": 2026,
+      "lastVerified": "2026-05-28",
+      "verificationNote": "Skolenkäten 2026, imported from official Excel files. Survey fields imported by skolenhetskod 56328727. Academic and admission fields remain from their existing sources. Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+      "slug": "fridaskolan-kvillebacken",
+      "academicScore": 6.8,
+      "schoolUnitId": 56328727,
+      "surveyImportStatus": "matched",
+      "surveySourceDetails": {
+        "schoolUnitId": 56328727,
+        "f0Guardians": {
+          "sourceSchoolName": "Fridaskolan Kvillebäcken",
+          "groupSize": 52,
+          "responseCount": 37,
+          "responseRate": 0.7
+        },
+        "grade5Pupils": {
+          "sourceSchoolName": "Fridaskolan Kvillebäcken",
+          "groupSize": 54,
+          "responseCount": 52,
+          "responseRate": 1.0
+        },
+        "grade8Pupils": {
+          "sourceSchoolName": "Fridaskolan Kvillebäcken",
+          "groupSize": 76,
+          "responseCount": 65,
+          "responseRate": 0.9
+        },
+        "schoolGuardians": {
+          "sourceSchoolName": "Fridaskolan Kvillebäcken",
+          "groupSize": 547,
+          "responseCount": 260,
+          "responseRate": 0.5
+        }
+      }
+    },
+    {
+      "name": "Ebba Petterssons Privatskola",
+      "type": "Fristående",
+      "grades": "F–9",
+      "area": "Västra Göteborg",
+      "address": "Göteborg",
+      "lat": 57.667,
+      "lng": 11.924,
+      "profile": "Established private school",
+      "qualityScore": 82,
+      "admissionScore": 25,
+      "admissionNote": "Private admissions/queue; competitive. Verify school-specific application period.",
+      "f0Satisfaction": 8.5,
+      "safety": 8.9,
+      "studyPeace": 8.5,
+      "support": 8.7,
+      "studentSatisfaction": 5.6,
+      "parentSatisfaction": 7.0,
+      "academicSignal": "Strong reputation; public ratings need import in v0.2.",
+      "decisionNote": "Important city-wide private option, but likely commute-heavy from Hisingen.",
+      "sources": [
+        {
+          "label": "School website",
+          "url": "https://ebbapettersson.se/"
+        },
+        {
+          "label": "Skolverket / Utbildningsguiden",
+          "url": "https://utbildningsguiden.skolverket.se/"
+        },
+        {
+          "label": "Skolinspektionen Skolenkäten 2026",
+          "url": "https://www.skolinspektionen.se/skolenkaten/resultat-fran-skolenkaten/resultat-skolenkaten-2026/"
+        }
+      ],
+      "dataYear": 2026,
+      "lastVerified": "2026-05-28",
+      "verificationNote": "Skolenkäten 2026, imported from official Excel files. Survey fields imported by skolenhetskod 88247874. Academic and admission fields remain from their existing sources. Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+      "slug": "ebba-petterssons-privatskola",
+      "academicScore": 8.2,
+      "schoolUnitId": 88247874,
+      "surveyImportStatus": "matched",
+      "surveySourceDetails": {
+        "schoolUnitId": 88247874,
+        "f0Guardians": {
+          "sourceSchoolName": "Ebba Petterssons Privatskola",
+          "groupSize": 50,
+          "responseCount": 18,
+          "responseRate": 0.4
+        },
+        "grade5Pupils": {
+          "sourceSchoolName": "Ebba Petterssons Privatskola",
+          "groupSize": 50,
+          "responseCount": 44,
+          "responseRate": 0.9
+        },
+        "grade8Pupils": {
+          "sourceSchoolName": "Ebba Petterssons Privatskola",
+          "groupSize": 104,
+          "responseCount": 94,
+          "responseRate": 0.9
+        },
+        "schoolGuardians": {
+          "sourceSchoolName": "Ebba Petterssons Privatskola",
+          "groupSize": 612,
+          "responseCount": 186,
+          "responseRate": 0.3
+        }
+      }
+    },
+    {
+      "name": "IES Södra Änggården",
+      "type": "Fristående",
+      "grades": "F–9",
+      "area": "Södra Änggården",
+      "address": "Göteborg",
+      "lat": 57.678,
+      "lng": 11.948,
+      "profile": "Bilingual / IES",
+      "qualityScore": 70,
+      "admissionScore": 40,
+      "admissionNote": "Private queue. Offers may go earlier than municipal decisions. Accepted private place should not automatically block municipal wishes if municipality is told correctly.",
+      "f0Satisfaction": null,
+      "safety": null,
+      "studyPeace": null,
+      "support": null,
+      "studentSatisfaction": null,
+      "parentSatisfaction": null,
+      "academicSignal": "Newer/specific campus data may be limited; verify opening-stage grades.",
+      "decisionNote": "Important expat option; check actual F0 availability for autumn 2027.",
+      "sources": [
+        {
+          "label": "IES Södra Änggården",
+          "url": "https://engelska.se/our-schools/sodraanggarden/"
+        },
+        {
+          "label": "Göteborg private-school form/info",
+          "url": "https://goteborg.se/wps/portal?uri=gbglnk%3A20221018102258134"
+        }
+      ],
+      "dataYear": 2026,
+      "lastVerified": "July 2026",
+      "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+      "slug": "ies-sodra-anggarden",
+      "academicScore": 6.5,
+      "schoolUnitId": null
+    },
+    {
+      "name": "Göteborgs Högre Samskola / Lilla Samskolan",
+      "type": "Fristående",
+      "grades": "F–6",
+      "area": "Centrum",
+      "address": "Göteborg",
+      "lat": 57.702,
+      "lng": 11.972,
+      "profile": "High-reputation private",
+      "qualityScore": 88,
+      "admissionScore": 20,
+      "admissionNote": "Competitive private admissions. Some places can be reserved for preschool pipeline; verify annually.",
+      "f0Satisfaction": 8.8,
+      "safety": 9.4,
+      "studyPeace": null,
+      "support": null,
+      "studentSatisfaction": null,
+      "parentSatisfaction": null,
+      "academicSignal": "Strong public rating signal from prior check.",
+      "decisionNote": "Very attractive, but low practical chance without strong queue/preschool/sibling position.",
+      "sources": [
+        {
+          "label": "Samskolan admissions",
+          "url": "https://www.samskolan.se/kontakt/ansokan/ansokan-detaljer/"
+        },
+        {
+          "label": "Skolverket / Utbildningsguiden",
+          "url": "https://utbildningsguiden.skolverket.se/"
+        }
+      ],
+      "dataYear": 2026,
+      "lastVerified": "July 2026",
+      "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+      "slug": "goteborgs-hogre-samskola-lilla-samskolan",
+      "academicScore": 8.8,
+      "schoolUnitId": 67568030,
+      "surveyImportStatus": "not-found-in-skolenkaten-files"
+    },
+    {
+      "name": "ISGR",
+      "type": "Fristående",
+      "grades": "F–9",
+      "area": "Centrum / international",
+      "address": "Göteborg",
+      "lat": 57.7,
+      "lng": 11.967,
+      "profile": "International / Swedish-English",
+      "qualityScore": 86,
+      "admissionScore": 25,
+      "admissionNote": "International/specific admissions profile; verify route and criteria.",
+      "f0Satisfaction": null,
+      "safety": 7.4,
+      "studyPeace": 5.8,
+      "support": 6.6,
+      "studentSatisfaction": 6.3,
+      "parentSatisfaction": 7.2,
+      "academicSignal": "Strong later academic signal in prior check.",
+      "decisionNote": "Good if international profile matters; not the simplest Hisingen F0 plan.",
+      "sources": [
+        {
+          "label": "ISGR admissions",
+          "url": "https://isgr.se/admissions/national-admissions/"
+        },
+        {
+          "label": "Skolverket / Utbildningsguiden",
+          "url": "https://utbildningsguiden.skolverket.se/"
+        },
+        {
+          "label": "Skolinspektionen Skolenkäten 2026",
+          "url": "https://www.skolinspektionen.se/skolenkaten/resultat-fran-skolenkaten/resultat-skolenkaten-2026/"
+        }
+      ],
+      "dataYear": 2026,
+      "lastVerified": "2026-05-28",
+      "verificationNote": "Skolenkäten 2026, imported from official Excel files. Survey fields imported by skolenhetskod 93758282. Academic and admission fields remain from their existing sources. Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+      "slug": "isgr",
+      "academicScore": 9.0,
+      "schoolUnitId": 93758282,
+      "surveyImportStatus": "matched",
+      "surveySourceDetails": {
+        "schoolUnitId": 93758282,
+        "f0Guardians": {
+          "sourceSchoolName": "ISGR/Swedish-Eng F-6",
+          "groupSize": 27,
+          "responseCount": 4,
+          "responseRate": 0.1
+        },
+        "grade5Pupils": {
+          "sourceSchoolName": "ISGR/Swedish-Eng F-6",
+          "groupSize": 56,
+          "responseCount": 41,
+          "responseRate": 0.7
+        },
+        "grade8Pupils": null,
+        "schoolGuardians": {
+          "sourceSchoolName": "ISGR/Swedish-Eng F-6",
+          "groupSize": 252,
+          "responseCount": 59,
+          "responseRate": 0.2
+        }
+      }
+    },
+    {
+      "name": "Vittra Kronhusparken",
+      "type": "Fristående",
+      "grades": "F–9",
+      "area": "Centrum",
+      "address": "Kronhusgatan 16, Göteborg",
+      "lat": 57.7079,
+      "lng": 11.9635,
+      "profile": "Central private F–9",
+      "qualityScore": 60,
+      "admissionScore": 45,
+      "admissionNote": "Private queue; central commute from Hisingen possible depending route.",
+      "f0Satisfaction": null,
+      "safety": 7.7,
+      "studyPeace": null,
+      "support": null,
+      "studentSatisfaction": 7.0,
+      "parentSatisfaction": 6.3,
+      "academicSignal": "Mixed public rating signal in prior check.",
+      "decisionNote": "Useful backup, not top quality-first choice.",
+      "sources": [
+        {
+          "label": "Vittra queue",
+          "url": "https://vittra.se/kronhusparken/koanmalan/"
+        },
+        {
+          "label": "Skolverket / Utbildningsguiden",
+          "url": "https://utbildningsguiden.skolverket.se/"
+        }
+      ],
+      "dataYear": 2026,
+      "lastVerified": "July 2026",
+      "verificationNote": "Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+      "slug": "vittra-kronhusparken",
+      "academicScore": 6.3,
+      "schoolUnitId": null
+    },
+    {
+      "name": "Montessoriskolan Casa",
+      "type": "Fristående",
+      "grades": "F–9",
+      "area": "Bö / central-east Göteborg",
+      "address": "Herrgårdsgatan 15, Göteborg",
+      "lat": 57.704,
+      "lng": 12.012,
+      "profile": "Montessori",
+      "qualityScore": 78,
+      "admissionScore": 25,
+      "admissionNote": "Private Montessori criteria; own preschool and sibling factors can matter.",
+      "f0Satisfaction": 8.2,
+      "safety": 8.1,
+      "studyPeace": 8.2,
+      "support": 8.5,
+      "studentSatisfaction": 8.5,
+      "parentSatisfaction": 8.4,
+      "academicSignal": "Good parent signal in prior check.",
+      "decisionNote": "Good if Montessori is desired; commute can be heavy from Hisingen.",
+      "sources": [
+        {
+          "label": "Casa admission principles",
+          "url": "https://casagbg.se/ansokan-och-koprinciper/"
+        },
+        {
+          "label": "Skolverket / Utbildningsguiden",
+          "url": "https://utbildningsguiden.skolverket.se/"
+        },
+        {
+          "label": "Skolinspektionen Skolenkäten 2026",
+          "url": "https://www.skolinspektionen.se/skolenkaten/resultat-fran-skolenkaten/resultat-skolenkaten-2026/"
+        }
+      ],
+      "dataYear": 2026,
+      "lastVerified": "2026-05-28",
+      "verificationNote": "Skolenkäten 2026, imported from official Excel files. Survey fields imported by skolenhetskod 76938537. Academic and admission fields remain from their existing sources. Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+      "slug": "montessoriskolan-casa",
+      "academicScore": 7.4,
+      "schoolUnitId": 76938537,
+      "surveyImportStatus": "matched",
+      "surveySourceDetails": {
+        "schoolUnitId": 76938537,
+        "f0Guardians": {
+          "sourceSchoolName": "Montessoriskolan Casa",
+          "groupSize": 20,
+          "responseCount": 15,
+          "responseRate": 0.8
+        },
+        "grade5Pupils": {
+          "sourceSchoolName": "Montessoriskolan Casa",
+          "groupSize": 20,
+          "responseCount": 20,
+          "responseRate": 1.0
+        },
+        "grade8Pupils": {
+          "sourceSchoolName": "Montessoriskolan Casa",
+          "groupSize": 30,
+          "responseCount": 28,
+          "responseRate": 0.9
+        },
+        "schoolGuardians": {
+          "sourceSchoolName": "Montessoriskolan Casa",
+          "groupSize": 220,
+          "responseCount": 146,
+          "responseRate": 0.7
+        }
+      }
+    },
+    {
+      "name": "Montessoriskolan Centrum",
+      "type": "Fristående",
+      "grades": "F–9",
+      "area": "Centrum",
+      "address": "Göteborg",
+      "lat": 57.704,
+      "lng": 11.97,
+      "profile": "Montessori",
+      "qualityScore": 76,
+      "admissionScore": 25,
+      "admissionNote": "Private queue; sibling/Montessori priority can matter.",
+      "f0Satisfaction": 10.0,
+      "safety": 9.9,
+      "studyPeace": 9.3,
+      "support": 9.1,
+      "studentSatisfaction": 6.8,
+      "parentSatisfaction": 7.5,
+      "academicSignal": "Good public rating signal in prior check.",
+      "decisionNote": "Potentially good, but queue and commute matter.",
+      "sources": [
+        {
+          "label": "Montessoriskolan Centrum interest form",
+          "url": "https://www.montessoriskolancentrum.se/intresseanmalan/"
+        },
+        {
+          "label": "Skolverket / Utbildningsguiden",
+          "url": "https://utbildningsguiden.skolverket.se/"
+        },
+        {
+          "label": "Skolinspektionen Skolenkäten 2026",
+          "url": "https://www.skolinspektionen.se/skolenkaten/resultat-fran-skolenkaten/resultat-skolenkaten-2026/"
+        }
+      ],
+      "dataYear": 2026,
+      "lastVerified": "2026-05-28",
+      "verificationNote": "Skolenkäten 2026, imported from official Excel files. Survey fields imported by skolenhetskod 73995321. Academic and admission fields remain from their existing sources. Demo data seeded from public sources. v0.6 calculates quality score from raw metrics; verify before application decisions.",
+      "slug": "montessoriskolan-centrum",
+      "academicScore": 7.6,
+      "schoolUnitId": 73995321,
+      "surveyImportStatus": "matched",
+      "surveySourceDetails": {
+        "schoolUnitId": 73995321,
+        "f0Guardians": {
+          "sourceSchoolName": "Montessoriskolan Centrum",
+          "groupSize": 24,
+          "responseCount": 10,
+          "responseRate": 0.4
+        },
+        "grade5Pupils": {
+          "sourceSchoolName": "Montessoriskolan Centrum",
+          "groupSize": 26,
+          "responseCount": 20,
+          "responseRate": 0.8
+        },
+        "grade8Pupils": {
+          "sourceSchoolName": "Montessoriskolan Centrum",
+          "groupSize": 29,
+          "responseCount": 26,
+          "responseRate": 0.9
+        },
+        "schoolGuardians": {
+          "sourceSchoolName": "Montessoriskolan Centrum",
+          "groupSize": 236,
+          "responseCount": 83,
+          "responseRate": 0.4
+        }
+      }
+    }
+  ]
+}

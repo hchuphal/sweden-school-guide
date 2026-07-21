@@ -11,6 +11,13 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.skolenkaten_importer import (
+    build_skolenkaten_import,
+    ensure_source_files,
+    load_baseline,
+    write_import_json,
+)
+
 ROOT = Path(__file__).resolve().parents[1]
 STATIC_DIR = ROOT / "static"
 DATA_DIR = ROOT / "data"
@@ -18,9 +25,9 @@ IMPORT_DIR = DATA_DIR / "imports"
 DB_PATH = Path(os.getenv("SCHOOLGUIDE_DB_PATH", DATA_DIR / "schoolguide.sqlite"))
 DEFAULT_YEAR_MODE = os.getenv("DEFAULT_YEAR_MODE", "current").strip().lower()
 BASELINE_FILE = DATA_DIR / "schools-2026.json"
-APP_VERSION = "0.6.0"
+APP_VERSION = "0.7.0"
 
-QUALITY_METHOD_VERSION = "v0.6 transparent weighted score"
+QUALITY_METHOD_VERSION = "v0.7 Skolenkäten-import-ready weighted score"
 MISSING_VALUE_BASELINE = 6.5
 
 QUALITY_COMPONENTS = [
@@ -107,6 +114,7 @@ def init_db() -> None:
                 lat REAL,
                 lng REAL,
                 profile TEXT,
+                school_unit_id INTEGER,
                 sources_json TEXT DEFAULT '[]',
                 updated_at TEXT NOT NULL
             )
@@ -147,7 +155,10 @@ def init_db() -> None:
             )
             """
         )
-        # Lightweight migration for databases created by v0.4.
+        # Lightweight migration for databases created by previous MVP versions.
+        school_columns = {row["name"] for row in conn.execute("PRAGMA table_info(schools)").fetchall()}
+        if "school_unit_id" not in school_columns:
+            conn.execute("ALTER TABLE schools ADD COLUMN school_unit_id INTEGER")
         columns = {row["name"] for row in conn.execute("PRAGMA table_info(school_year_metrics)").fetchall()}
         if "academicScore" not in columns:
             conn.execute("ALTER TABLE school_year_metrics ADD COLUMN academicScore REAL")
@@ -176,8 +187,8 @@ def upsert_schools(records: Iterable[dict[str, Any]], source_label: str) -> int:
             sources_json = json.dumps(item.get("sources", []), ensure_ascii=False)
             conn.execute(
                 """
-                INSERT INTO schools (slug, name, type, grades, area, address, lat, lng, profile, sources_json, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO schools (slug, name, type, grades, area, address, lat, lng, profile, school_unit_id, sources_json, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(slug) DO UPDATE SET
                     name=excluded.name,
                     type=excluded.type,
@@ -187,6 +198,7 @@ def upsert_schools(records: Iterable[dict[str, Any]], source_label: str) -> int:
                     lat=excluded.lat,
                     lng=excluded.lng,
                     profile=excluded.profile,
+                    school_unit_id=excluded.school_unit_id,
                     sources_json=excluded.sources_json,
                     updated_at=excluded.updated_at
                 """,
@@ -200,6 +212,7 @@ def upsert_schools(records: Iterable[dict[str, Any]], source_label: str) -> int:
                     item.get("lat"),
                     item.get("lng"),
                     item.get("profile"),
+                    item.get("schoolUnitId"),
                     sources_json,
                     imported_at,
                 ),
@@ -418,7 +431,7 @@ def methodology() -> dict[str, Any]:
         "admissionNote": "Admission realism is separate from quality. Municipal values can use Göteborg placement statistics; private-school values should be based on queue rules and verified local knowledge.",
         "yearFallback": "Default year mode is current: the API uses the newest imported official data year and falls back per school only when that current-year record is missing.",
         "recommendedSources": [
-            "Skolinspektionen Skolenkäten for survey ratings: F0 guardians, grundskola guardians, pupils grade 5/8 and teachers.",
+            "Skolinspektionen Skolenkäten Excel files for survey ratings: F0 guardians, grundskola guardians, pupils grade 5/8 and teachers.",
             "Skolverket/Utbildningsguiden and national statistics for school-unit facts, teacher ratios and academic results.",
             "Göteborg Stad placement statistics for municipal admission realism.",
             "Individual fristående school pages for queue and admission rules."
@@ -499,6 +512,42 @@ def school_api(slug: str, year: str = Query(default=DEFAULT_YEAR_MODE)) -> dict[
         history_items.append(history_dict)
     item["history"] = history_items
     return item
+
+
+@app.post("/api/admin/import/skolenkaten")
+def import_skolenkaten_api(request: Request, year: int = Query(default=2026), apply: bool = Query(default=True)) -> JSONResponse:
+    """Download and import Skolinspektionen Skolenkäten survey Excel files.
+
+    This endpoint updates the running SQLite database and writes a JSON import file under
+    data/imports/ so the same import can be replayed at startup. In production, protect it
+    with ADMIN_TOKEN and call it after Skolinspektionen publishes a new annual result.
+    """
+    admin_token = os.getenv("ADMIN_TOKEN")
+    if admin_token:
+        supplied = request.headers.get("x-admin-token")
+        if supplied != admin_token:
+            raise HTTPException(status_code=401, detail="Invalid admin token")
+    try:
+        cache_dir = DATA_DIR / "source_cache" / "skolenkaten"
+        baseline_path = DATA_DIR / f"schools-{year}.json"
+        if not baseline_path.exists():
+            baseline_path = BASELINE_FILE
+        baseline = load_baseline(baseline_path)
+        source_files = ensure_source_files(year, cache_dir, use_network=True)
+        records, import_metadata = build_skolenkaten_import(baseline, source_files, year=year)
+        output_path = DATA_DIR / "imports" / f"schools-{year}-skolenkaten.json"
+        write_import_json(records, output_path, import_metadata)
+        imported = upsert_schools(records, output_path.name) if apply else 0
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse({
+        "ok": True,
+        "applied": apply,
+        "imported": imported,
+        "output": str(output_path.relative_to(ROOT)),
+        "metadata": import_metadata,
+        "time": now_iso(),
+    })
 
 
 @app.post("/api/import")

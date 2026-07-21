@@ -1,65 +1,58 @@
-# Gothenburg School Guide MVP v0.6
+# Gothenburg School Guide MVP v0.7
 
-A Render-deployable FastAPI + SQLite MVP for comparing Gothenburg schools for expat families choosing F0/F–9.
+A Render-ready FastAPI web app for comparing Gothenburg schools for expat families choosing F0/förskoleklass through F–9.
 
-## What changed in v0.6
+## What v0.7 adds
 
-- Removed the confusing hard-coded target year `2027` from the frontend.
-- Default year mode is now `current`.
-- The backend uses the newest imported official data year as the current year.
-- If the current year is missing for a specific school, that school falls back to its latest verified prior-year record.
-- The top-directory helper text is cleaner and no longer mentions demo data in the hero area.
-- Methodology now explicitly identifies Skolinspektionen Skolenkäten as a recommended primary survey source.
+- Backend + SQLite database from v0.6 retained.
+- Current-year data mode retained: the app uses the newest imported year and falls back per school only when the current year is missing.
+- Quality score is computed by the backend, not manually sorted.
+- **Skolinspektionen Skolenkäten importer added.**
+- A prebuilt `data/imports/schools-2026-skolenkaten.json` import is included, generated from the official Skolenkäten 2026 Excel files.
+- CLI script: `scripts/import_skolenkaten.py`.
+- Admin endpoint: `POST /api/admin/import/skolenkaten?year=2026&apply=true`.
 
-## Data-year behavior
+## Important source model
 
-The frontend calls:
+The app separates source types:
 
-```text
-/api/schools?year=current
-```
+| Data type | Primary source |
+|---|---|
+| Survey/rating fields | Skolinspektionen Skolenkäten Excel files |
+| School-unit facts and displayed school pages | Skolverket / Utbildningsguiden |
+| Academic indicators | Skolverket / Utbildningsguiden / national statistics |
+| Municipal admission realism | Göteborg Stad placement statistics |
+| Private-school queue rules | Each private school's own admission page |
 
-The backend resolves `current` like this:
+Skolenkäten survey fields imported in v0.7 include:
 
-1. Find the newest year that exists in the database, for example 2026.
-2. Use that year for all schools where a record exists.
-3. For any school missing that current-year record, use the latest verified prior year for that school.
-4. Show the data year and confidence on every card.
+- F0 guardian satisfaction
+- Safety / trygghet
+- Study peace / studiero
+- Support / stöd
+- Grade 5 or grade 8 pupil satisfaction
+- Guardian satisfaction for grundskola
 
-This means the app will not ask for 2027 before 2027 data has actually been imported. When official 2027 files are later added, 2027 becomes the current year automatically.
+Academic score and admission realism are **not** overwritten by the Skolenkäten importer.
 
-## Quality score formula
+## Current import behavior
 
-The backend calculates quality score from rating fields using these weights:
+For the 15 seeded schools, the included Skolenkäten 2026 import matched 11 schools by `skolenhetskod`.
 
-| Component | Weight |
-|---|---:|
-| F0 parent satisfaction | 20% |
-| Safety / trygghet | 20% |
-| Study peace / studiero | 15% |
-| Support / stöd | 10% |
-| Student satisfaction | 10% |
-| Parent satisfaction | 10% |
-| Academic signal | 10% |
-| Data confidence | 5% |
+Schools not matched in the 2026 Skolenkäten Excel files keep their existing verified values and confidence/missing-data treatment:
 
-Missing values use a neutral 6.5/10 placeholder and lower the data-confidence component. Admission realism is separate and does not affect quality score.
+- Innovitaskolan St Jörgen
+- IES Södra Änggården
+- Göteborgs Högre Samskola / Lilla Samskolan
+- Vittra Kronhusparken
 
-## Recommended source model
+That can happen when a school did not participate in that Skolenkäten year, has no published row in that file, or uses another/reporting unit.
 
-Use separate official sources for separate concepts:
-
-- **Skolinspektionen Skolenkäten**: primary source for survey/rating indicators such as F0 guardian satisfaction, trygghet, studiero, stöd/stimulans and pupil survey values.
-- **Skolverket / Utbildningsguiden / Skolverket statistics**: school-unit facts, grade coverage, huvudman/type, teacher ratios, national tests and meritvärde.
-- **Göteborg Stad placement statistics**: municipal admission realism, including first-choice placement and sibling-priority share.
-- **Individual fristående school pages**: queue rules, preschool priority, sibling priority and application timing.
-
-## Local run
+## Run locally
 
 ```bash
-cd gothenburg-school-guide-v0.6
 pip install -r requirements.txt
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload
 ```
 
 Open:
@@ -68,38 +61,55 @@ Open:
 http://localhost:8000
 ```
 
-## Render Web Service
-
-Use:
+## Render Web Service settings
 
 ```text
 Build command: pip install -r requirements.txt
 Start command: uvicorn app.main:app --host 0.0.0.0 --port $PORT
 ```
 
-The included `render.yaml` is ready for a Render Web Service.
+## Re-import Skolenkäten data from CLI
 
-## API
+```bash
+PYTHONPATH=. python scripts/import_skolenkaten.py --year 2026
+```
+
+This downloads the official Excel files into `data/source_cache/skolenkaten/2026/`, parses them, and writes:
 
 ```text
+data/imports/schools-2026-skolenkaten.json
+```
+
+The app imports JSON files in `data/imports/` on startup.
+
+## Re-import through API
+
+```bash
+curl -X POST "https://YOUR-APP.onrender.com/api/admin/import/skolenkaten?year=2026&apply=true" \
+  -H "x-admin-token: YOUR_ADMIN_TOKEN"
+```
+
+Set `ADMIN_TOKEN` in Render if you want the endpoint protected.
+
+## API endpoints
+
+```text
+/
 /api/health
 /api/metadata
 /api/methodology
-/api/schools
 /api/schools?year=current
-/api/schools?year=2026
+/api/schools/{slug}?year=current
+/api/admin/import/skolenkaten?year=2026&apply=true
+/api/import
 ```
 
-## Importing a future year
+## Notes
 
-Add a file such as:
+This is still an MVP. It is not yet a fully automated Skolverket/Göteborg import pipeline. The next version should add:
 
-```text
-data/imports/schools-2027.json
-```
-
-with records using the same schema as `data/schools-2026.json`, then restart/redeploy the service. The current year will become 2027 automatically because it is now the newest imported year.
-
-## Limitation
-
-This MVP does not yet scrape or download Skolinspektionen/Skolverket live. It is import-ready: official data must be transformed into the app schema and imported as JSON, or later handled by a dedicated importer script.
+- Skolverket school-unit API importer
+- Göteborg placement-stat parser
+- proper PostgreSQL instead of SQLite for production persistence
+- real geocoding and route distance
+- separate year trends in the UI
