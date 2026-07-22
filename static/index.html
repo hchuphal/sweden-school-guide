@@ -28,7 +28,7 @@
           </svg>
         </span>
         <span class="brand-text">
-          <span class="brand-title-row"><span class="brand-title">Sweden School Guide</span><span class="brand-version">v0.11</span></span>
+          <span class="brand-title-row"><span class="brand-title">Sweden School Guide</span><span class="brand-version">v0.12</span></span>
           <span class="brand-subtitle">School search, ratings and admissions</span>
         </span>
       </div>
@@ -135,8 +135,8 @@
           <h2>Find nearby realistic options</h2>
         </div>
         <div class="section-note-card compact">
-          <strong>MVP distance model.</strong>
-          <span>Uses built-in Gothenburg coordinates and straight-line distance. Route distance/geocoding comes next.</span>
+          <strong>Live address lookup.</strong>
+          <span>Enter a full Swedish address or postal code. The result is validated against the selected city; school distances remain straight-line estimates rather than route distances.</span>
         </div>
       </div>
 
@@ -147,6 +147,7 @@
         </label>
         <button id="findNearbyBtn" class="button primary" type="button">Find schools</button>
       </div>
+      <p class="geocoder-attribution">Address lookup by <a href="https://nominatim.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap Nominatim</a>.</p>
       <div id="nearbyResults" class="nearby-results"></div>
     </section>
 
@@ -199,7 +200,7 @@
   </main>
 
   <footer class="footer">
-    <p>Built as MVP v0.11. Backend API + SQLite database + current-year data mode + Skolenkäten importer + collapsible survey/academic/admission sections.</p>
+    <p>Built as MVP v0.12. Backend API + SQLite database + current-year data mode + Skolenkäten importer + collapsible survey/academic/admission sections.</p>
     <p><a href="/api/metadata">API metadata</a> · <a href="/assets/README.md">README</a></p>
   </footer>
 

@@ -1,8 +1,8 @@
-# Sweden School Guide MVP v0.11
+# Sweden School Guide MVP v0.12
 
 A Render-ready FastAPI web app for comparing Gothenburg schools for families choosing F0/förskoleklass through F–9.
 
-## What v0.11 adds
+## What v0.12 adds
 
 - Keeps backend + SQLite database + current-year data mode from v0.7.
 - Keeps the Skolinspektionen Skolenkäten importer from v0.7.
@@ -26,7 +26,7 @@ The app separates source types:
 | Municipal admission realism | Göteborg Stad placement statistics |
 | Fristående/private admission rules | Each school's own admission page |
 
-Skolenkäten survey fields shown in v0.11 include:
+Skolenkäten survey fields shown in v0.12 include:
 
 - F0 guardian satisfaction
 - Safety / trygghet
@@ -115,3 +115,8 @@ This is still an MVP. It is not yet a fully automated Skolverket/Göteborg impor
 - proper PostgreSQL instead of SQLite for production persistence
 - real geocoding and route distance
 - year trend UI
+
+
+## Address lookup in v0.12
+
+The nearby search now calls the backend `/api/geocode` endpoint, which uses OpenStreetMap Nominatim for low-volume MVP geocoding. Results are cached in SQLite, restricted to Sweden, and validated against the selected city. Full addresses and postal codes are accepted. For production scale, configure a commercial or self-hosted geocoding provider via `GEOCODER_URL`.

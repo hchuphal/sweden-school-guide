@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -25,9 +26,18 @@ IMPORT_DIR = DATA_DIR / "imports"
 DB_PATH = Path(os.getenv("SCHOOLGUIDE_DB_PATH", DATA_DIR / "schoolguide.sqlite"))
 DEFAULT_YEAR_MODE = os.getenv("DEFAULT_YEAR_MODE", "current").strip().lower()
 BASELINE_FILE = DATA_DIR / "schools-2026.json"
-APP_VERSION = "0.8.0"
+GEOCODER_URL = os.getenv("GEOCODER_URL", "https://nominatim.openstreetmap.org/search")
+GEOCODER_USER_AGENT = os.getenv("GEOCODER_USER_AGENT", "SwedenSchoolGuide/0.12")
+GEOCODER_EMAIL = os.getenv("GEOCODER_EMAIL", "").strip()
+CITY_CONFIG = {
+    "goteborg": {
+        "label": "Göteborg",
+        "aliases": {"goteborg", "göteborg", "gothenburg", "goteborgs kommun", "göteborgs kommun"},
+    }
+}
+APP_VERSION = "0.12.0"
 
-QUALITY_METHOD_VERSION = "v0.8 separated survey, academic and admission UI"
+QUALITY_METHOD_VERSION = "v0.12 survey, academic and admission UI with live address geocoding"
 MISSING_VALUE_BASELINE = 6.5
 
 QUALITY_COMPONENTS = [
@@ -152,6 +162,17 @@ def init_db() -> None:
                 source_label TEXT NOT NULL,
                 record_count INTEGER NOT NULL,
                 imported_at TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS geocode_cache (
+                cache_key TEXT PRIMARY KEY,
+                query_text TEXT NOT NULL,
+                city_key TEXT NOT NULL,
+                result_json TEXT NOT NULL,
+                created_at TEXT NOT NULL
             )
             """
         )
@@ -398,12 +419,160 @@ def combine_school_and_metric(school: sqlite3.Row, metric: sqlite3.Row, is_fallb
     return result
 
 
+
+def normalize_location_text(value: str | None) -> str:
+    clean = (value or "").strip().lower()
+    clean = clean.replace("å", "a").replace("ä", "a").replace("ö", "o")
+    clean = re.sub(r"[^a-z0-9]+", " ", clean)
+    return re.sub(r"\s+", " ", clean).strip()
+
+
+def geocode_cache_key(query: str, city_key: str) -> str:
+    return f"{city_key}:{normalize_location_text(query)}"
+
+
+def result_locality_values(result: dict[str, Any]) -> list[str]:
+    address = result.get("address") or {}
+    fields = [
+        "municipality", "city", "town", "village", "borough", "city_district",
+        "suburb", "county", "state_district"
+    ]
+    return [str(address.get(field)) for field in fields if address.get(field)]
+
+
+def result_matches_city(result: dict[str, Any], city_key: str) -> bool:
+    config = CITY_CONFIG.get(city_key)
+    if not config:
+        return False
+    aliases = {normalize_location_text(value) for value in config["aliases"]}
+    locality_values = {normalize_location_text(value) for value in result_locality_values(result)}
+    for locality in locality_values:
+        if locality in aliases:
+            return True
+        if any(alias and alias in locality for alias in aliases):
+            return True
+    return False
+
+
+def detected_municipality(result: dict[str, Any]) -> str | None:
+    address = result.get("address") or {}
+    return (
+        address.get("municipality")
+        or address.get("city")
+        or address.get("town")
+        or address.get("village")
+        or address.get("county")
+    )
+
+
+def fetch_geocode(query: str, city_key: str) -> dict[str, Any]:
+    clean_query = query.strip()
+    if not clean_query:
+        raise HTTPException(status_code=400, detail="Enter an address or postal code")
+    if city_key not in CITY_CONFIG:
+        raise HTTPException(status_code=400, detail="The selected city dataset is not available yet")
+
+    key = geocode_cache_key(clean_query, city_key)
+    with db() as conn:
+        cached = conn.execute(
+            "SELECT result_json FROM geocode_cache WHERE cache_key=?", (key,)
+        ).fetchone()
+        if cached:
+            payload = json.loads(cached["result_json"])
+            payload["cached"] = True
+            return payload
+
+    search_query = clean_query
+    if "sweden" not in normalize_location_text(search_query) and "sverige" not in normalize_location_text(search_query):
+        search_query = f"{search_query}, Sweden"
+    params: dict[str, Any] = {
+        "q": search_query,
+        "format": "jsonv2",
+        "addressdetails": 1,
+        "limit": 5,
+        "countrycodes": "se",
+        "accept-language": "sv,en",
+    }
+    if GEOCODER_EMAIL:
+        params["email"] = GEOCODER_EMAIL
+    headers = {
+        "User-Agent": GEOCODER_USER_AGENT,
+        "Accept": "application/json",
+    }
+    try:
+        response = requests.get(GEOCODER_URL, params=params, headers=headers, timeout=12)
+        response.raise_for_status()
+        results = response.json()
+    except requests.RequestException as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Address lookup is temporarily unavailable. Try again shortly.",
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail="Address provider returned an invalid response") from exc
+
+    if not isinstance(results, list) or not results:
+        payload = {
+            "found": False,
+            "insideSelectedCity": False,
+            "selectedCity": CITY_CONFIG[city_key]["label"],
+            "query": clean_query,
+            "message": "No Swedish address or postal code matched the search.",
+            "provider": "OpenStreetMap Nominatim",
+        }
+    else:
+        inside = [result for result in results if result_matches_city(result, city_key)]
+        chosen = inside[0] if inside else results[0]
+        address = chosen.get("address") or {}
+        try:
+            lat = float(chosen["lat"])
+            lng = float(chosen["lon"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise HTTPException(status_code=502, detail="Address provider did not return coordinates") from exc
+        inside_selected = result_matches_city(chosen, city_key)
+        municipality = detected_municipality(chosen)
+        message = (
+            f"Address matched within {CITY_CONFIG[city_key]['label']}."
+            if inside_selected
+            else f"This address appears to be in {municipality or 'another municipality'}, not {CITY_CONFIG[city_key]['label']}."
+        )
+        payload = {
+            "found": True,
+            "insideSelectedCity": inside_selected,
+            "selectedCity": CITY_CONFIG[city_key]["label"],
+            "query": clean_query,
+            "displayName": chosen.get("display_name") or clean_query,
+            "lat": lat,
+            "lng": lng,
+            "postalCode": address.get("postcode"),
+            "municipality": municipality,
+            "resultType": chosen.get("type"),
+            "message": message,
+            "provider": "OpenStreetMap Nominatim",
+        }
+
+    with db() as conn:
+        conn.execute(
+            """
+            INSERT INTO geocode_cache (cache_key, query_text, city_key, result_json, created_at)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(cache_key) DO UPDATE SET
+                result_json=excluded.result_json,
+                created_at=excluded.created_at
+            """,
+            (key, clean_query, city_key, json.dumps(payload, ensure_ascii=False), now_iso()),
+        )
+        conn.commit()
+    payload["cached"] = False
+    return payload
+
+
 def get_available_years(conn: sqlite3.Connection) -> list[int]:
     rows = conn.execute("SELECT DISTINCT year FROM school_year_metrics ORDER BY year DESC").fetchall()
     return [int(row["year"]) for row in rows]
 
 
-app = FastAPI(title="Gothenburg School Guide", version=APP_VERSION)
+app = FastAPI(title="Sweden School Guide", version=APP_VERSION)
 app.mount("/assets", StaticFiles(directory=STATIC_DIR), name="assets")
 
 
@@ -420,6 +589,14 @@ def home() -> FileResponse:
 @app.get("/api/health")
 def health() -> dict[str, Any]:
     return {"status": "ok", "version": APP_VERSION, "time": now_iso()}
+
+
+@app.get("/api/geocode")
+def geocode_api(
+    q: str = Query(min_length=3, max_length=220),
+    city: str = Query(default="goteborg"),
+) -> dict[str, Any]:
+    return fetch_geocode(q, city.strip().lower())
 
 
 @app.get("/api/methodology")
@@ -457,6 +634,7 @@ def metadata() -> dict[str, Any]:
         "qualityMethodVersion": QUALITY_METHOD_VERSION,
         "qualityFormula": calculate_quality({})["qualityFormula"],
         "updateMode": "Default mode uses the current imported data year. If a current-year record is missing for a school, the API falls back to the latest prior verified year for that school.",
+        "geocoding": {"provider": "OpenStreetMap Nominatim", "supportedCities": ["goteborg"], "cache": True},
     }
 
 

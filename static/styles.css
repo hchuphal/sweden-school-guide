@@ -187,3 +187,7 @@ input:focus, select:focus { outline: 3px solid rgba(40,75,99,.16); border-color:
   .brand-version { font-size: .76rem; padding: 3px 8px; }
   .brand-mark, .brand-mark svg { width: 46px; height: 46px; }
 }
+
+.geocoder-attribution { margin: -10px 0 14px; color: var(--muted); font-size: .8rem; }
+.geocoder-attribution a { color: var(--accent); }
+.notice span { color: inherit; opacity: .88; }

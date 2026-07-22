@@ -45,10 +45,13 @@ function distanceKm(a, b) {
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-function getPointFromAddress(input) {
-  const q = normalize(input);
-  const match = knownAddresses.find(a => a.aliases.some(alias => q.includes(normalize(alias))));
-  return match || knownAddresses[0];
+async function geocodeAddress(input, cityKey) {
+  const query = String(input || "").trim();
+  if (!query) throw new Error("Enter an address or postal code.");
+  const response = await fetch(`/api/geocode?q=${encodeURIComponent(query)}&city=${encodeURIComponent(cityKey)}`);
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.detail || "Address lookup failed.");
+  return payload;
 }
 
 function sourceLinks(school) {
@@ -81,8 +84,8 @@ function confidenceClass(school) {
   return "low";
 }
 
-function nearbyFitScore(school) {
-  const home = knownAddresses[0];
+function nearbyFitScore(school, origin = knownAddresses[0]) {
+  const home = origin;
   const distance = distanceKm(home, school);
   const continuityBonus = school.grades === "F–9" ? 8 : 0;
   const socialContinuityBonus = school.name === "Jättestensskolan" ? 18 : 0;
@@ -262,32 +265,64 @@ function renderDirectory() {
   $("schoolGrid").innerHTML = list.map(schoolCard).join("") || `<p class="empty">No schools match the current filters.</p>`;
 }
 
-function renderNearby() {
-  const origin = getPointFromAddress($("addressInput").value);
-  const nearby = schools
-    .map(school => ({ ...school, distance: distanceKm(origin, school), fit: nearbyFitScore(school) }))
-    .sort((a, b) => b.fit - a.fit)
-    .slice(0, 6);
-  $("nearbyResults").innerHTML = `
-    <p class="nearby-context">Showing scenario results for <strong>${escapeHtml(origin.label)}</strong>. Distances are straight-line estimates in this MVP.</p>
-    ${nearby.map((school, index) => `
-      <article class="nearby-card">
-        <div>
-          <p class="eyebrow">Option ${index + 1}</p>
-          <h3>${escapeHtml(school.name)}</h3>
-          <p class="card-meta">${escapeHtml(school.type)} · ${escapeHtml(school.grades)} · ${escapeHtml(school.area)}</p>
-          ${dataFreshness(school)}
-          <div class="metric-row"><span>Computed quality</span><strong>${fmt(school.qualityScore)}/100</strong></div>
-          <div class="metric-row"><span>Admission realism</span><strong>${fmt(school.admissionScore)}/100</strong></div>
-          <p class="decision-note">${escapeHtml(school.decisionNote || "")}</p>
-        </div>
-        <div class="distance">
-          <strong>${school.distance.toFixed(1)} km</strong>
-          <span>fit score ${Math.round(school.fit)}</span>
-        </div>
-      </article>
-    `).join("")}
-  `;
+async function renderNearby() {
+  const input = $("addressInput").value;
+  const cityKey = $("citySelect")?.value || SUPPORTED_CITY;
+  $("nearbyResults").innerHTML = `<p class="nearby-context">Looking up the address…</p>`;
+
+  if (cityKey !== SUPPORTED_CITY) {
+    $("nearbyResults").innerHTML = `<div class="notice"><strong>City data not available:</strong> the selected city is marked coming soon. Choose Göteborg to use address search.</div>`;
+    return;
+  }
+
+  try {
+    const result = await geocodeAddress(input, cityKey);
+    if (!result.found) {
+      $("nearbyResults").innerHTML = `<div class="notice"><strong>Address not found:</strong> ${escapeHtml(result.message || "Try a full street address or postal code.")}</div>`;
+      return;
+    }
+    if (!result.insideSelectedCity) {
+      $("nearbyResults").innerHTML = `
+        <div class="notice">
+          <strong>Outside the selected city:</strong> ${escapeHtml(result.message || "The address is outside the current dataset.")}
+          <br><span>Matched address: ${escapeHtml(result.displayName || input)}</span>
+        </div>`;
+      return;
+    }
+
+    const origin = {
+      label: result.displayName || input,
+      lat: Number(result.lat),
+      lng: Number(result.lng),
+    };
+    const nearby = schools
+      .map(school => ({ ...school, distance: distanceKm(origin, school), fit: nearbyFitScore(school, origin) }))
+      .sort((a, b) => a.distance - b.distance || b.fit - a.fit)
+      .slice(0, 6);
+
+    $("nearbyResults").innerHTML = `
+      <p class="nearby-context">Matched <strong>${escapeHtml(origin.label)}</strong>${result.postalCode ? ` · postal code ${escapeHtml(result.postalCode)}` : ""}. Distances are straight-line estimates from the matched coordinates.</p>
+      ${nearby.map((school, index) => `
+        <article class="nearby-card">
+          <div>
+            <p class="eyebrow">Option ${index + 1}</p>
+            <h3>${escapeHtml(school.name)}</h3>
+            <p class="card-meta">${escapeHtml(school.type)} · ${escapeHtml(school.grades)} · ${escapeHtml(school.area)}</p>
+            ${dataFreshness(school)}
+            <div class="metric-row"><span>Computed quality</span><strong>${fmt(school.qualityScore)}/100</strong></div>
+            <div class="metric-row"><span>Admission realism</span><strong>${fmt(school.admissionScore)}/100</strong></div>
+            <p class="decision-note">${escapeHtml(school.decisionNote || "")}</p>
+          </div>
+          <div class="distance">
+            <strong>${school.distance.toFixed(1)} km</strong>
+            <span>straight-line</span>
+          </div>
+        </article>
+      `).join("")}
+    `;
+  } catch (err) {
+    $("nearbyResults").innerHTML = `<div class="notice"><strong>Address lookup failed:</strong> ${escapeHtml(err.message || "Please try again.")}</div>`;
+  }
 }
 
 function findSchoolByInput(value) {
@@ -420,7 +455,7 @@ async function init() {
 
   $("schoolNames").innerHTML = schools.map(s => `<option value="${escapeHtml(s.name)}"></option>`).join("");
   ["schoolSearch", "typeFilter", "gradeFilter", "sortFilter"].forEach(id => $(id).addEventListener("input", renderDirectory));
-  $("citySelect")?.addEventListener("change", updateCityNotice);
+  $("citySelect")?.addEventListener("change", () => { updateCityNotice(); renderNearby(); });
   $("findNearbyBtn").addEventListener("click", renderNearby);
   $("compareBtn").addEventListener("click", renderCompare);
 
