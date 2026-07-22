@@ -5,6 +5,7 @@ import os
 import sqlite3
 import re
 import threading
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -32,7 +33,7 @@ DB_PATH = Path(os.getenv("SCHOOLGUIDE_DB_PATH", DATA_DIR / "schoolguide.sqlite")
 DEFAULT_YEAR_MODE = os.getenv("DEFAULT_YEAR_MODE", "current").strip().lower()
 BASELINE_FILE = DATA_DIR / "schools-2026.json"
 GEOCODER_URL = os.getenv("GEOCODER_URL", "https://nominatim.openstreetmap.org/search")
-GEOCODER_USER_AGENT = os.getenv("GEOCODER_USER_AGENT", "SwedenSchoolGuide/0.14")
+GEOCODER_USER_AGENT = os.getenv("GEOCODER_USER_AGENT", "SwedenSchoolGuide/0.15")
 GEOCODER_EMAIL = os.getenv("GEOCODER_EMAIL", "").strip()
 SCHOOL_REGISTRY_URL = os.getenv(
     "SCHOOL_REGISTRY_URL",
@@ -40,6 +41,9 @@ SCHOOL_REGISTRY_URL = os.getenv(
 )
 AUTO_IMPORT_SCHOOL_REGISTRY = os.getenv("AUTO_IMPORT_SCHOOL_REGISTRY", "true").strip().lower() in {"1", "true", "yes", "on"}
 AUTO_IMPORT_SKOLENKATEN = os.getenv("AUTO_IMPORT_SKOLENKATEN", "true").strip().lower() in {"1", "true", "yes", "on"}
+REGISTRY_SYNC_RETRY_SECONDS = int(os.getenv("REGISTRY_SYNC_RETRY_SECONDS", "120"))
+_REGISTRY_SYNC_LOCK = threading.Lock()
+_LAST_REGISTRY_SYNC_START = 0.0
 CITY_CONFIG = {
     "goteborg": {
         "label": "Göteborg",
@@ -69,9 +73,9 @@ CITY_CONFIG = {
         "search_aliases": {"uppsala"},
     },
 }
-APP_VERSION = "0.14.0"
+APP_VERSION = "0.15.0"
 
-QUALITY_METHOD_VERSION = "v0.14 four-city registry, national surveys and location-aware nearby search"
+QUALITY_METHOD_VERSION = "v0.15 city-aware directory, registry fallback and national surveys"
 MISSING_VALUE_BASELINE = 6.5
 
 QUALITY_COMPONENTS = [
@@ -506,6 +510,34 @@ def combine_school_and_metric(school: sqlite3.Row, metric: sqlite3.Row, is_fallb
     return result
 
 
+def combine_school_without_metric(school: sqlite3.Row, requested_year: int | None) -> dict[str, Any]:
+    """Return an official registry school even when ratings are not imported yet."""
+    result = dict(school)
+    result["sources"] = json.loads(result.pop("sources_json") or "[]")
+    result["cityKey"] = result.get("city_key")
+    result["postalCode"] = result.get("postal_code")
+    result["registrySource"] = result.get("registry_source")
+    for field in METRIC_FIELDS:
+        result[field] = None
+    result.update({
+        "dataYear": None,
+        "requestedDataYear": requested_year,
+        "isFallback": False,
+        "fallbackLabel": None,
+        "editorialQualityScore": None,
+        "qualityScore": None,
+        "qualityBreakdown": [],
+        "dataCompletenessPct": 0,
+        "dataConfidenceLabel": "No rating data",
+        "missingQualityFields": [item["key"] for item in QUALITY_COMPONENTS],
+        "verificationNote": "Official school-registry record; detailed survey and academic data are not yet imported.",
+        "decisionNote": "Official school-registry record. Open the school sources and verify current grades, profile and admission rules.",
+        "admissionNote": "Admission data is not yet imported for this school.",
+        "academicSignal": "Academic result data is not yet imported for this school.",
+    })
+    return result
+
+
 
 
 def set_state(key: str, value: dict[str, Any]) -> None:
@@ -653,16 +685,38 @@ def run_registry_sync(import_surveys: bool = True) -> dict[str, Any]:
         return result
 
 
-def start_background_sync_if_needed() -> None:
+def start_background_sync_if_needed(force: bool = False) -> bool:
+    """Start one registry sync thread, with a retry cooldown.
+
+    `force=True` is used when a selected city has no directory records even if
+    another city already has registry data.
+    """
+    global _LAST_REGISTRY_SYNC_START
     if not AUTO_IMPORT_SCHOOL_REGISTRY:
-        return
-    with db() as conn:
-        count = conn.execute("SELECT COUNT(*) AS n FROM schools WHERE registry_source='Skolverket school-unit register'").fetchone()["n"]
-    state = get_state("registry_sync") or {}
-    if count > 0 or state.get("status") == "running":
-        return
-    thread = threading.Thread(target=run_registry_sync, kwargs={"import_surveys": AUTO_IMPORT_SKOLENKATEN}, daemon=True)
-    thread.start()
+        return False
+    with _REGISTRY_SYNC_LOCK:
+        state = get_state("registry_sync") or {}
+        if state.get("status") == "running":
+            return False
+        now_mono = time.monotonic()
+        if now_mono - _LAST_REGISTRY_SYNC_START < REGISTRY_SYNC_RETRY_SECONDS:
+            return False
+        if not force:
+            with db() as conn:
+                count = conn.execute(
+                    "SELECT COUNT(*) AS n FROM schools WHERE registry_source='Skolverket school-unit register'"
+                ).fetchone()["n"]
+            if count > 0:
+                return False
+        _LAST_REGISTRY_SYNC_START = now_mono
+        thread = threading.Thread(
+            target=run_registry_sync,
+            kwargs={"import_surveys": AUTO_IMPORT_SKOLENKATEN},
+            daemon=True,
+        )
+        thread.start()
+        return True
+
 
 def normalize_location_text(value: str | None) -> str:
     clean = (value or "").strip().lower()
@@ -870,6 +924,15 @@ app = FastAPI(title="Sweden School Guide", version=APP_VERSION)
 app.mount("/assets", StaticFiles(directory=STATIC_DIR), name="assets")
 
 
+@app.middleware("http")
+async def no_cache_dynamic_assets(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path == "/" or request.url.path.startswith("/assets/") or request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+    return response
+
+
 @app.on_event("startup")
 def _startup() -> None:
     bootstrap_database()
@@ -938,9 +1001,11 @@ def nearby_api(
             if distance > radius_km:
                 continue
             metric, fallback, requested_year = metric_row_for(conn, school["slug"], year)
-            if not metric:
-                continue
-            item = combine_school_and_metric(school, metric, fallback, requested_year)
+            item = (
+                combine_school_and_metric(school, metric, fallback, requested_year)
+                if metric
+                else combine_school_without_metric(school, requested_year)
+            )
             item["distanceKm"] = round(distance, 2)
             candidates.append(item)
     candidates.sort(key=lambda item: (item["distanceKm"], -(item.get("qualityScore") or 0)))
@@ -1014,23 +1079,48 @@ def schools_api(
     city_key = city.strip().lower()
     if city_key not in CITY_CONFIG and city_key != "all":
         raise HTTPException(status_code=400, detail="Unsupported city dataset")
+
+    sync_triggered = False
     with db() as conn:
         if city_key == "all":
             school_rows = conn.execute("SELECT * FROM schools ORDER BY name COLLATE NOCASE").fetchall()
         else:
-            school_rows = conn.execute("SELECT * FROM schools WHERE city_key=? ORDER BY name COLLATE NOCASE", (city_key,)).fetchall()
+            school_rows = conn.execute(
+                "SELECT * FROM schools WHERE city_key=? ORDER BY name COLLATE NOCASE", (city_key,)
+            ).fetchall()
+
+    if city_key != "all" and not school_rows:
+        sync_triggered = start_background_sync_if_needed(force=True)
+
+    with db() as conn:
+        if city_key == "all":
+            school_rows = conn.execute("SELECT * FROM schools ORDER BY name COLLATE NOCASE").fetchall()
+        else:
+            school_rows = conn.execute(
+                "SELECT * FROM schools WHERE city_key=? ORDER BY name COLLATE NOCASE", (city_key,)
+            ).fetchall()
         items = []
         fallback_count = 0
+        rated_count = 0
+        registry_only_count = 0
+        requested_year, _year_mode = resolve_year_param(conn, year)
         for school in school_rows:
-            metric, fallback, requested_year = metric_row_for(conn, school["slug"], year)
-            if not metric:
-                continue
-            if fallback:
-                fallback_count += 1
-            items.append(combine_school_and_metric(school, metric, fallback, requested_year))
+            metric, fallback, requested_metric_year = metric_row_for(conn, school["slug"], year)
+            if metric:
+                if fallback:
+                    fallback_count += 1
+                rated_count += 1
+                items.append(combine_school_and_metric(school, metric, fallback, requested_metric_year))
+            else:
+                registry_only_count += 1
+                items.append(combine_school_without_metric(school, requested_year))
         available_years = get_available_years(conn)
         current_year = max(available_years) if available_years else None
         resolved_year, year_mode = resolve_year_param(conn, year)
+        city_counts_rows = conn.execute(
+            "SELECT city_key, COUNT(*) AS n FROM schools GROUP BY city_key"
+        ).fetchall()
+    city_counts = {row["city_key"]: int(row["n"]) for row in city_counts_rows if row["city_key"]}
     return {
         "requestedYear": year,
         "city": city_key,
@@ -1040,6 +1130,11 @@ def schools_api(
         "currentDataYear": current_year,
         "availableYears": available_years,
         "fallbackCount": fallback_count,
+        "ratedCount": rated_count,
+        "registryOnlyCount": registry_only_count,
+        "cityCounts": city_counts,
+        "syncTriggered": sync_triggered,
+        "registrySync": get_state("registry_sync"),
         "count": len(items),
         "schools": items,
     }

@@ -14,6 +14,8 @@ const CITY_CENTERS = {
   uppsala: { label: "Uppsala", lat: 59.8586, lng: 17.6389 },
 };
 let lastNearbyOrigin = CITY_CENTERS.goteborg;
+let cityReloadTimer = null;
+let cityReloadAttempts = 0;
 
 const $ = (id) => document.getElementById(id);
 
@@ -75,6 +77,15 @@ function sourceLinks(school) {
 }
 
 function dataFreshness(school) {
+  if (!school.dataYear) {
+    return `
+      <div class="data-freshness" title="This school is listed from the official school-unit register, but detailed rating data is not yet imported.">
+        <span>School record: <strong>${escapeHtml(school.registrySource || "Official registry")}</strong></span>
+        <span>Rating year: <strong>not available</strong></span>
+        <span>Score confidence: <strong>No rating data</strong></span>
+      </div>
+    `;
+  }
   const fallback = school.isFallback ? `<span class="fallback-pill">${escapeHtml(school.fallbackLabel || "Fallback data")}</span>` : "";
   return `
     <div class="data-freshness" title="Ratings and admission data are year-specific.">
@@ -244,7 +255,7 @@ function schoolCard(school) {
       ${academicBlock(school)}
       ${admissionBlock(school)}
       ${methodSummary(school)}
-      <p class="decision-note">${escapeHtml(school.decisionNote || "")}</p>
+      <p class="decision-note">${escapeHtml(school.decisionNote || school.verificationNote || "Official school record; detailed ratings may not yet be imported.")}</p>
       <p class="sources">${sourceLinks(school)}</p>
     </article>
   `;
@@ -268,6 +279,13 @@ function renderDirectory() {
   const mode = $("sortFilter").value;
   $("sortNote").textContent = sortNote(mode);
   const list = filteredSchools();
+  const cityKey = $("citySelect")?.value || "goteborg";
+  const cityLabel = CITY_LABELS[cityKey] || "Selected city";
+  $("directoryTitle").textContent = `${cityLabel} school directory`;
+  const rated = schools.filter(s => s.dataYear).length;
+  $("directoryMeta").textContent = schools.length
+    ? `${schools.length} schools loaded · ${rated} with rating-year data`
+    : `No schools loaded yet for ${cityLabel}`;
   $("schoolGrid").innerHTML = list.map(schoolCard).join("") || `<p class="empty">No schools match the current filters.</p>`;
 }
 
@@ -367,7 +385,7 @@ function compareCard(school) {
       ${academicBlock(school)}
       ${admissionBlock(school)}
       ${methodSummary(school)}
-      <p class="decision-note">${escapeHtml(school.decisionNote || "")}</p>
+      <p class="decision-note">${escapeHtml(school.decisionNote || school.verificationNote || "Official school record; detailed ratings may not yet be imported.")}</p>
       <p class="sources">${sourceLinks(school)}</p>
     </article>
   `;
@@ -443,16 +461,69 @@ function updateDataMode(payload) {
   }
 }
 
-async function loadSchoolsForCity(cityKey) {
-  const schoolsResponse = await fetch(`/api/schools?year=${encodeURIComponent(YEAR_MODE)}&city=${encodeURIComponent(cityKey)}`);
+function updateCompareDefaults() {
+  const inputs = [...document.querySelectorAll(".compareSchool")];
+  const availableNames = new Set(schools.map(s => normalize(s.name)));
+  inputs.forEach((input, index) => {
+    if (!availableNames.has(normalize(input.value))) {
+      input.value = schools[index]?.name || "";
+    }
+  });
+}
+
+function scheduleCityReload(cityKey, payload) {
+  if (cityReloadTimer) clearTimeout(cityReloadTimer);
+  const status = payload?.registrySync?.status;
+  if (schools.length || status === "failed" || cityReloadAttempts >= 20) {
+    cityReloadAttempts = 0;
+    return;
+  }
+  cityReloadAttempts += 1;
+  cityReloadTimer = setTimeout(async () => {
+    try {
+      await loadSchoolsForCity(cityKey, true);
+    } catch (err) {
+      console.error(err);
+    }
+  }, 3000);
+}
+
+async function loadSchoolsForCity(cityKey, isPoll = false) {
+  if (!isPoll) {
+    cityReloadAttempts = 0;
+    if (cityReloadTimer) clearTimeout(cityReloadTimer);
+    $("schoolGrid").innerHTML = `<p class="empty">Loading ${escapeHtml(CITY_LABELS[cityKey] || cityKey)} schools…</p>`;
+    $("directoryTitle").textContent = `${CITY_LABELS[cityKey] || "Selected city"} school directory`;
+    $("directoryMeta").textContent = "Loading official school records…";
+  }
+  const schoolsResponse = await fetch(
+    `/api/schools?year=${encodeURIComponent(YEAR_MODE)}&city=${encodeURIComponent(cityKey)}&_=${Date.now()}`,
+    { cache: "no-store" }
+  );
   if (!schoolsResponse.ok) throw new Error("Could not load school data");
   const payload = await schoolsResponse.json();
   schools = payload.schools || [];
   updateDataMode(payload);
   $("schoolNames").innerHTML = schools.map(s => `<option value="${escapeHtml(s.name)}"></option>`).join("");
   lastNearbyOrigin = CITY_CENTERS[cityKey] || lastNearbyOrigin;
+  updateCompareDefaults();
   renderDirectory();
   renderCompare();
+
+  if (!schools.length) {
+    const sync = payload.registrySync || {};
+    const cityLabel = CITY_LABELS[cityKey] || cityKey;
+    if (sync.status === "running" || payload.syncTriggered) {
+      $("schoolGrid").innerHTML = `<div class="notice"><strong>Loading ${escapeHtml(cityLabel)} schools:</strong> the official Skolverket registry sync is running. This page will retry automatically.</div>`;
+    } else if (sync.status === "failed") {
+      $("schoolGrid").innerHTML = `<div class="notice"><strong>Registry sync failed:</strong> ${escapeHtml(sync.error || "Could not download the official school register.")} Redeploy or retry later.</div>`;
+    } else {
+      $("schoolGrid").innerHTML = `<div class="notice"><strong>No schools loaded for ${escapeHtml(cityLabel)}:</strong> the official registry import has not completed yet. This page will retry automatically.</div>`;
+    }
+    scheduleCityReload(cityKey, payload);
+  } else {
+    cityReloadAttempts = 0;
+  }
   return payload;
 }
 
@@ -478,6 +549,10 @@ async function init() {
   ["schoolSearch", "typeFilter", "gradeFilter", "sortFilter"].forEach(id => $(id).addEventListener("input", renderDirectory));
   $("citySelect")?.addEventListener("change", async () => {
     updateCityNotice();
+    $("schoolSearch").value = "";
+    $("typeFilter").value = "all";
+    $("gradeFilter").value = "all";
+    $("nearbyResults").innerHTML = `<p class="nearby-context">Enter an address in ${escapeHtml(CITY_LABELS[$("citySelect").value] || "the selected city")} to find nearby schools.</p>`;
     try {
       await loadSchoolsForCity($("citySelect").value);
     } catch (err) {

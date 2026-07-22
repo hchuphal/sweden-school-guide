@@ -1,4 +1,4 @@
-# Sweden School Guide MVP v0.14
+# Sweden School Guide MVP v0.15
 
 FastAPI + SQLite web application for comparing Swedish schools. The current build supports four selectable city datasets:
 
@@ -7,7 +7,7 @@ FastAPI + SQLite web application for comparing Swedish schools. The current buil
 - Malmö
 - Uppsala
 
-## What changed in v0.14
+## What changed in v0.15
 
 - All four city options are active.
 - Address lookup no longer rejects a matched address merely because the dropdown was set to another city.
@@ -69,3 +69,12 @@ Use `--skip-surveys` to import school facts only.
 - The school-register parser is intentionally defensive because the official API is external and may evolve.
 - Schools without coordinates cannot appear in nearby results until coordinates are supplied by the registry or a separate school-address geocoder.
 - Quality ratings, academic results and admission rules may have different publication years and coverage.
+
+
+## v0.15 directory fix
+
+- The top-level directory follows the selected city.
+- Registry-only schools remain visible even when survey ratings are unavailable.
+- Empty city datasets trigger/poll the official registry sync.
+- City school counts and rated-data counts are shown.
+- Static/API responses use no-cache headers to avoid stale city data after deployment.

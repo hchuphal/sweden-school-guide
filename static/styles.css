@@ -191,3 +191,5 @@ input:focus, select:focus { outline: 3px solid rgba(40,75,99,.16); border-color:
 .geocoder-attribution { margin: -10px 0 14px; color: var(--muted); font-size: .8rem; }
 .geocoder-attribution a { color: var(--accent); }
 .notice span { color: inherit; opacity: .88; }
+
+.directory-meta { margin: 8px 0 0; color: var(--muted); font-weight: 700; }
