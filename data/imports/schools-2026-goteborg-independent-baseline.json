@@ -1,0 +1,122 @@
+[
+  {
+    "slug": "noblaskolan-lindholmen",
+    "name": "Noblaskolan Lindholmen",
+    "type": "Fristående",
+    "grades": "6–9",
+    "area": "Lindholmen",
+    "address": "Verkmästaregatan 7, 417 57 Göteborg",
+    "lat": 57.7064058422841,
+    "lng": 11.9333616445222,
+    "profile": "Independent school for grades 6–9",
+    "qualityScore": null,
+    "admissionScore": null,
+    "admissionNote": "Fristående school; admission is handled through the school's own application and queue rules.",
+    "f0Satisfaction": null,
+    "safety": null,
+    "studyPeace": null,
+    "support": null,
+    "studentSatisfaction": null,
+    "parentSatisfaction": null,
+    "academicSignal": null,
+    "academicScore": null,
+    "decisionNote": "Grades 6–9 only. It is not a förskoleklass option, but it remains visible in the full Göteborg directory and nearby search.",
+    "sources": [
+      {
+        "label": "Göteborgs Stad school directory",
+        "url": "https://goteborg.se/wps/portal/start/forskola-och-utbildning/grundskola/hitta-forskoleklass-grundskola-och-anpassad-grundskola?id=3150"
+      },
+      {
+        "label": "Noblaskolan Lindholmen",
+        "url": "https://noblaskolan.se/lindholmen/"
+      }
+    ],
+    "dataYear": 2026,
+    "lastVerified": "2026-07-22",
+    "verificationNote": "Bundled fallback verified against Göteborgs Stad and the school's current website. Survey, academic and admission metrics have not yet been imported.",
+    "cityKey": "goteborg",
+    "municipality": "Göteborg",
+    "postalCode": "417 57",
+    "registrySource": "Official local fallback"
+  },
+  {
+    "slug": "noblaskolan-kviberg",
+    "name": "Noblaskolan Kviberg",
+    "type": "Fristående",
+    "grades": "6–9",
+    "area": "Kviberg",
+    "address": "Luftvärnsvägen 4–6, 415 27 Göteborg",
+    "lat": 57.73596,
+    "lng": 12.029711,
+    "profile": "Independent school for grades 6–9",
+    "qualityScore": null,
+    "admissionScore": null,
+    "admissionNote": "Fristående school; admission is handled through the school's own application and queue rules.",
+    "f0Satisfaction": null,
+    "safety": null,
+    "studyPeace": null,
+    "support": null,
+    "studentSatisfaction": null,
+    "parentSatisfaction": null,
+    "academicSignal": null,
+    "academicScore": null,
+    "decisionNote": "Grades 6–9 only. It is not a förskoleklass option, but it remains visible in the full Göteborg directory and nearby search.",
+    "sources": [
+      {
+        "label": "Noblaskolan Kviberg",
+        "url": "https://noblaskolan.se/kviberg/"
+      },
+      {
+        "label": "Noblaskolan Kviberg contact",
+        "url": "https://noblaskolan.se/kviberg/kontakt/"
+      }
+    ],
+    "dataYear": 2026,
+    "lastVerified": "2026-07-22",
+    "verificationNote": "Bundled fallback verified against the school's current website. Survey, academic and admission metrics have not yet been imported.",
+    "cityKey": "goteborg",
+    "municipality": "Göteborg",
+    "postalCode": "415 27",
+    "registrySource": "Official local fallback"
+  },
+  {
+    "slug": "noblaskolan-nya-hovas",
+    "name": "Noblaskolan Nya Hovås",
+    "type": "Fristående",
+    "grades": "F–9",
+    "area": "Nya Hovås",
+    "address": "Björklundabacken 2–4, 436 57 Hovås",
+    "lat": 57.60085,
+    "lng": 11.952349,
+    "profile": "Independent F–9 school with separate F–5 and 6–9 buildings",
+    "qualityScore": null,
+    "admissionScore": null,
+    "admissionNote": "Fristående school; admission is handled through the school's own application and queue rules.",
+    "f0Satisfaction": null,
+    "safety": null,
+    "studyPeace": null,
+    "support": null,
+    "studentSatisfaction": null,
+    "parentSatisfaction": null,
+    "academicSignal": null,
+    "academicScore": null,
+    "decisionNote": "Offers förskoleklass through year 9. The displayed address is the F–5 building; years 6–9 use Hovås Allé 12.",
+    "sources": [
+      {
+        "label": "Noblaskolan Nya Hovås",
+        "url": "https://noblaskolan.se/nya-hovas/"
+      },
+      {
+        "label": "Noblaskolan Nya Hovås contact",
+        "url": "https://noblaskolan.se/nya-hovas/kontakt/"
+      }
+    ],
+    "dataYear": 2026,
+    "lastVerified": "2026-07-22",
+    "verificationNote": "Bundled fallback verified against the school's current website. Survey, academic and admission metrics have not yet been imported.",
+    "cityKey": "goteborg",
+    "municipality": "Göteborg",
+    "postalCode": "436 57",
+    "registrySource": "Official local fallback"
+  }
+]

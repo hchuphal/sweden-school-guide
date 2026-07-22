@@ -33,7 +33,7 @@ DB_PATH = Path(os.getenv("SCHOOLGUIDE_DB_PATH", DATA_DIR / "schoolguide.sqlite")
 DEFAULT_YEAR_MODE = os.getenv("DEFAULT_YEAR_MODE", "current").strip().lower()
 BASELINE_FILE = DATA_DIR / "schools-2026.json"
 GEOCODER_URL = os.getenv("GEOCODER_URL", "https://nominatim.openstreetmap.org/search")
-GEOCODER_USER_AGENT = os.getenv("GEOCODER_USER_AGENT", "SwedenSchoolGuide/0.16")
+GEOCODER_USER_AGENT = os.getenv("GEOCODER_USER_AGENT", "SwedenSchoolGuide/0.17")
 GEOCODER_EMAIL = os.getenv("GEOCODER_EMAIL", "").strip()
 SCHOOL_REGISTRY_URL = os.getenv(
     "SCHOOL_REGISTRY_URL",
@@ -73,9 +73,9 @@ CITY_CONFIG = {
         "search_aliases": {"uppsala"},
     },
 }
-APP_VERSION = "0.16.0"
+APP_VERSION = "0.17.0"
 
-QUALITY_METHOD_VERSION = "v0.16 bundled four-city baselines, registry refresh and national surveys"
+QUALITY_METHOD_VERSION = "v0.17 bundled city baselines, Noblaskolan coverage, registry refresh and national surveys"
 MISSING_VALUE_BASELINE = 6.5
 
 QUALITY_COMPONENTS = [

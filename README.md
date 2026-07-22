@@ -1,4 +1,4 @@
-# Sweden School Guide MVP v0.16
+# Sweden School Guide MVP v0.17
 
 FastAPI + SQLite web application for comparing Swedish schools. The current build supports four selectable city datasets:
 
@@ -7,7 +7,7 @@ FastAPI + SQLite web application for comparing Swedish schools. The current buil
 - Malmö
 - Uppsala
 
-## What changed in v0.16
+## What changed in v0.17
 
 - All four city options are active.
 - Address lookup no longer rejects a matched address merely because the dropdown was set to another city.
@@ -71,7 +71,7 @@ Use `--skip-surveys` to import school facts only.
 - Quality ratings, academic results and admission rules may have different publication years and coverage.
 
 
-## v0.16 directory fix
+## v0.17 directory fix
 
 - The top-level directory follows the selected city.
 - Registry-only schools remain visible even when survey ratings are unavailable.
@@ -80,6 +80,11 @@ Use `--skip-surveys` to import school facts only.
 - Static/API responses use no-cache headers to avoid stale city data after deployment.
 
 
-## v0.16 bundled city baselines
+## v0.17 bundled city baselines
 
 Stockholm, Malmö and Uppsala now include bundled official-directory fallback records. They load immediately without waiting for the Skolverket API. The live registry sync remains enabled as a refresh/enrichment path. Bundled fallback records may not contain coordinates, ratings or admission statistics until enriched.
+
+
+## v0.17 Göteborg independent-school fallback
+
+Adds all three current Noblaskolan Göteborg schools to the bundled baseline so they appear without waiting for the live registry sync.
