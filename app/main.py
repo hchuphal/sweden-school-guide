@@ -33,7 +33,7 @@ DB_PATH = Path(os.getenv("SCHOOLGUIDE_DB_PATH", DATA_DIR / "schoolguide.sqlite")
 DEFAULT_YEAR_MODE = os.getenv("DEFAULT_YEAR_MODE", "current").strip().lower()
 BASELINE_FILE = DATA_DIR / "schools-2026.json"
 GEOCODER_URL = os.getenv("GEOCODER_URL", "https://nominatim.openstreetmap.org/search")
-GEOCODER_USER_AGENT = os.getenv("GEOCODER_USER_AGENT", "SwedenSchoolGuide/0.15")
+GEOCODER_USER_AGENT = os.getenv("GEOCODER_USER_AGENT", "SwedenSchoolGuide/0.16")
 GEOCODER_EMAIL = os.getenv("GEOCODER_EMAIL", "").strip()
 SCHOOL_REGISTRY_URL = os.getenv(
     "SCHOOL_REGISTRY_URL",
@@ -73,9 +73,9 @@ CITY_CONFIG = {
         "search_aliases": {"uppsala"},
     },
 }
-APP_VERSION = "0.15.0"
+APP_VERSION = "0.16.0"
 
-QUALITY_METHOD_VERSION = "v0.15 city-aware directory, registry fallback and national surveys"
+QUALITY_METHOD_VERSION = "v0.16 bundled four-city baselines, registry refresh and national surveys"
 MISSING_VALUE_BASELINE = 6.5
 
 QUALITY_COMPONENTS = [
@@ -1068,6 +1068,7 @@ def metadata() -> dict[str, Any]:
             for key, config in CITY_CONFIG.items()
         ],
         "registrySync": get_state("registry_sync"),
+        "baselineMode": "Bundled baseline records make all four city directories available immediately; live registry sync refreshes and enriches them when available.",
     }
 
 

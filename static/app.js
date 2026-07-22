@@ -518,7 +518,11 @@ async function loadSchoolsForCity(cityKey, isPoll = false) {
     } else if (sync.status === "failed") {
       $("schoolGrid").innerHTML = `<div class="notice"><strong>Registry sync failed:</strong> ${escapeHtml(sync.error || "Could not download the official school register.")} Redeploy or retry later.</div>`;
     } else {
-      $("schoolGrid").innerHTML = `<div class="notice"><strong>No schools loaded for ${escapeHtml(cityLabel)}:</strong> the official registry import has not completed yet. This page will retry automatically.</div>`;
+      const sync = metadata?.registrySync || {};
+      const reason = sync.status === "failed"
+        ? `The live registry refresh failed: ${escapeHtml(sync.error || "unknown error")}.`
+        : "No bundled or live registry records are available for this city.";
+      $("schoolGrid").innerHTML = `<div class="notice"><strong>No schools loaded for ${escapeHtml(cityLabel)}.</strong> ${reason}</div>`;
     }
     scheduleCityReload(cityKey, payload);
   } else {

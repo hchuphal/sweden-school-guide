@@ -1,0 +1,927 @@
+[
+  {
+    "slug": "stockholm-gamla-enskede-skola",
+    "name": "Gamla Enskede skola",
+    "type": "Municipal",
+    "grades": "F–6",
+    "area": "Enskede-Årsta-Vantör",
+    "address": "Stockholmsvägen 30, Stockholm",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "stockholm",
+    "municipality": "Stockholm",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://grundskola.stockholm/hitta-grundskola/grundskola/gamla-enskede-skola"
+      }
+    ]
+  },
+  {
+    "slug": "stockholm-enskedefaltets-skola",
+    "name": "Enskedefältets skola",
+    "type": "Municipal",
+    "grades": "F–6",
+    "area": "Enskede-Årsta-Vantör",
+    "address": "Sockenvägen 370, Stockholm",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "stockholm",
+    "municipality": "Stockholm",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://grundskola.stockholm/hitta-grundskola/grundskola/enskedefaltets-skola"
+      }
+    ]
+  },
+  {
+    "slug": "stockholm-grimstaskolan",
+    "name": "Grimstaskolan",
+    "type": "Municipal",
+    "grades": "F–9",
+    "area": "Hässelby-Vällingby",
+    "address": "Stockholm",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "stockholm",
+    "municipality": "Stockholm",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://grundskola.stockholm/hitta-grundskola/grundskola/grimstaskolan"
+      }
+    ]
+  },
+  {
+    "slug": "stockholm-arstaskolan",
+    "name": "Årstaskolan",
+    "type": "Municipal",
+    "grades": "F–9",
+    "area": "Årsta",
+    "address": "Stockholm",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "stockholm",
+    "municipality": "Stockholm",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://grundskola.stockholm/hitta-grundskola/grundskola/arstaskolan"
+      }
+    ]
+  },
+  {
+    "slug": "stockholm-kampetorpsskolan",
+    "name": "Kämpetorpsskolan",
+    "type": "Municipal",
+    "grades": "F–9",
+    "area": "Älvsjö",
+    "address": "Stockholm",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "stockholm",
+    "municipality": "Stockholm",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://grundskola.stockholm/hitta-grundskola/grundskola/kampetorpsskolan-f-9/"
+      }
+    ]
+  },
+  {
+    "slug": "stockholm-hagsatraskolan",
+    "name": "Hagsätraskolan",
+    "type": "Municipal",
+    "grades": "F–9",
+    "area": "Hagsätra",
+    "address": "Stockholm",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "stockholm",
+    "municipality": "Stockholm",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://grundskola.stockholm/hitta-grundskola/grundskola/hagsatraskolan-f-9/"
+      }
+    ]
+  },
+  {
+    "slug": "stockholm-issr",
+    "name": "International School of the Stockholm Region",
+    "type": "Municipal",
+    "grades": "F–9",
+    "area": "Södermalm",
+    "address": "Stockholm",
+    "lat": null,
+    "lng": null,
+    "profile": "International school",
+    "cityKey": "stockholm",
+    "municipality": "Stockholm",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://grundskola.stockholm/hitta-grundskola/grundskola/international-school-of-the-Stockholm-region"
+      }
+    ]
+  },
+  {
+    "slug": "stockholm-soderholmsskolan",
+    "name": "Söderholmsskolan",
+    "type": "Municipal",
+    "grades": "F–6",
+    "area": "Skärholmen",
+    "address": "Vårholmsbackarna 100, Stockholm",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "stockholm",
+    "municipality": "Stockholm",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://grundskola.stockholm/hitta-grundskola/grundskola/soderholmsskolan"
+      }
+    ]
+  },
+  {
+    "slug": "stockholm-kristna-skolan",
+    "name": "Kristna skolan",
+    "type": "Fristående",
+    "grades": "F–9",
+    "area": "Stockholm",
+    "address": "Stockholm",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "stockholm",
+    "municipality": "Stockholm",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://grundskola.stockholm/hitta-grundskola/grundskola/kristna-skolan"
+      }
+    ]
+  },
+  {
+    "slug": "stockholm-estniska-skolan",
+    "name": "Estniska Skolan",
+    "type": "Fristående",
+    "grades": "F–9",
+    "area": "Norrmalm",
+    "address": "111 29 Stockholm",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "stockholm",
+    "municipality": "Stockholm",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://grundskola.stockholm/hitta-grundskola/grundskola/estniska-skolan"
+      }
+    ]
+  },
+  {
+    "slug": "stockholm-sturebyskolan",
+    "name": "Sturebyskolan",
+    "type": "Municipal",
+    "grades": "F–9",
+    "area": "Stureby",
+    "address": "Stockholm",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "stockholm",
+    "municipality": "Stockholm",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://grundskola.stockholm/hitta-grundskola/grundskola/sturebyskolan/"
+      }
+    ]
+  },
+  {
+    "slug": "stockholm-kungsholmens-grundskola",
+    "name": "Kungsholmens grundskola",
+    "type": "Municipal",
+    "grades": "F–9",
+    "area": "Kungsholmen",
+    "address": "Stockholm",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "stockholm",
+    "municipality": "Stockholm",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://grundskola.stockholm/hitta-grundskola/grundskola/kungsholmens-grundskola"
+      }
+    ]
+  },
+  {
+    "slug": "stockholm-johannes-skola",
+    "name": "Johannes skola",
+    "type": "Municipal",
+    "grades": "F–6",
+    "area": "Norrmalm",
+    "address": "Stockholm",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "stockholm",
+    "municipality": "Stockholm",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://grundskola.stockholm/hitta-grundskola/grundskola/johannes-skola"
+      }
+    ]
+  },
+  {
+    "slug": "stockholm-hedvig-eleonora-skola",
+    "name": "Hedvig Eleonora skola",
+    "type": "Municipal",
+    "grades": "F–6",
+    "area": "Östermalm",
+    "address": "Stockholm",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "stockholm",
+    "municipality": "Stockholm",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://grundskola.stockholm/hitta-grundskola/grundskola/hedvig-eleonora-skola"
+      }
+    ]
+  },
+  {
+    "slug": "stockholm-solhemsskolan",
+    "name": "Solhemsskolan",
+    "type": "Municipal",
+    "grades": "F–6",
+    "area": "Spånga-Tensta",
+    "address": "Stockholm",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "stockholm",
+    "municipality": "Stockholm",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://grundskola.stockholm/hitta-grundskola/grundskola/solhemsskolan"
+      }
+    ]
+  },
+  {
+    "slug": "malmo-varner-rydenskola",
+    "name": "Värner Rydénskolan",
+    "type": "Municipal",
+    "grades": "F–6",
+    "area": "Malmö",
+    "address": "Malmö",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "malmo",
+    "municipality": "Malmö",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://malmo.se/Bo-och-leva/Utbildning-och-forskola/Grundskola/Grundskolor-A-O/Varner-Rydenskolan-F-6.html"
+      }
+    ]
+  },
+  {
+    "slug": "malmo-tingdammsskolan",
+    "name": "Tingdammsskolan",
+    "type": "Municipal",
+    "grades": "F–6",
+    "area": "Oxie",
+    "address": "Hans Winbergs väg 4, Malmö",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "malmo",
+    "municipality": "Malmö",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://malmo.se/Bo-och-leva/Utbildning-och-forskola/Grundskola/Grundskolor-A-O/Tingdammsskolan/Om-Tingdammsskolan.html"
+      }
+    ]
+  },
+  {
+    "slug": "malmo-ortagardsskolan",
+    "name": "Örtagårdsskolan",
+    "type": "Municipal",
+    "grades": "F–6",
+    "area": "Rosengård",
+    "address": "Hårds väg 113, Malmö",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "malmo",
+    "municipality": "Malmö",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://malmo.se/Bo-och-leva/Utbildning-och-forskola/Grundskola/Grundskolor-A-O/Ortagardsskolan-F-6/Om-Ortagardskolan-F-6.html"
+      }
+    ]
+  },
+  {
+    "slug": "malmo-apelgardsskolan",
+    "name": "Apelgårdsskolan",
+    "type": "Municipal",
+    "grades": "F–6",
+    "area": "Rosengård",
+    "address": "Malmö",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "malmo",
+    "municipality": "Malmö",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://malmo.se/Bo-och-leva/Utbildning-och-forskola/Grundskola/Grundskolor-A-O/Apelgardsskolan-F-6.html"
+      }
+    ]
+  },
+  {
+    "slug": "malmo-kirsebergsskolan",
+    "name": "Kirsebergsskolan",
+    "type": "Municipal",
+    "grades": "F–6",
+    "area": "Kirseberg",
+    "address": "Malmö",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "malmo",
+    "municipality": "Malmö",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://malmo.se/Bo-och-leva/Utbildning-och-forskola/Grundskola/Grundskolor-A-O/Kirsebergsskolan/Om-Kirsebergsskolan.html"
+      }
+    ]
+  },
+  {
+    "slug": "malmo-oxievangsskolan",
+    "name": "Oxievångsskolan",
+    "type": "Municipal",
+    "grades": "F–9",
+    "area": "Oxie",
+    "address": "Lerbråkavägen 1, Malmö",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "malmo",
+    "municipality": "Malmö",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://malmo.se/Bo-och-leva/Utbildning-och-forskola/Grundskola/Grundskolor-A-O/Oxievangsskolan/Om-Oxievangsskolan.html"
+      }
+    ]
+  },
+  {
+    "slug": "malmo-husieskolan",
+    "name": "Husieskolan",
+    "type": "Municipal",
+    "grades": "F–6",
+    "area": "Husie",
+    "address": "Malmö",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "malmo",
+    "municipality": "Malmö",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://malmo.se/Bo-och-leva/Utbildning-och-forskola/Grundskola/Grundskolor-A-O/Husieskolan.html"
+      }
+    ]
+  },
+  {
+    "slug": "malmo-rosengardsskolan",
+    "name": "Rosengårdsskolan",
+    "type": "Municipal",
+    "grades": "F–6",
+    "area": "Rosengård",
+    "address": "von Rosens väg 43, Malmö",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "malmo",
+    "municipality": "Malmö",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://malmo.se/Bo-och-leva/Utbildning-och-forskola/Grundskola/Grundskolor-A-O/Rosengardsskolan-F-6/Kontakta-Rosengardsskolan--F-6.html"
+      }
+    ]
+  },
+  {
+    "slug": "malmo-hogaholmsskolan",
+    "name": "Högaholmsskolan",
+    "type": "Municipal",
+    "grades": "F–6",
+    "area": "Lindängen",
+    "address": "Lindängsplan 8, Malmö",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "malmo",
+    "municipality": "Malmö",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://malmo.se/Bo-och-leva/Utbildning-och-forskola/Grundskola/Grundskolor-A-O/Hogaholmsskolan/Om-Hogaholmsskolan.html"
+      }
+    ]
+  },
+  {
+    "slug": "malmo-lorensborgsskolan",
+    "name": "Lorensborgsskolan",
+    "type": "Municipal",
+    "grades": "F–6",
+    "area": "Lorensborg",
+    "address": "Hallingsgatan 1, Malmö",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "malmo",
+    "municipality": "Malmö",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://malmo.se/Bo-och-leva/Utbildning-och-forskola/Grundskola/Grundskolor-A-O/Lorensborgsskolan/Om-Lorensborgsskolan.html"
+      }
+    ]
+  },
+  {
+    "slug": "uppsala-vaksalaskolan",
+    "name": "Vaksalaskolan",
+    "type": "Municipal",
+    "grades": "F–9",
+    "area": "Uppsala",
+    "address": "Uppsala",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "uppsala",
+    "municipality": "Uppsala",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://vaksalaskolan.uppsala.se/skolan/"
+      }
+    ]
+  },
+  {
+    "slug": "uppsala-kvarngardesskolan",
+    "name": "Kvarngärdesskolan Uppsala International School",
+    "type": "Municipal",
+    "grades": "F–9",
+    "area": "Kvarngärdet",
+    "address": "Thunmansgatan 47, Uppsala",
+    "lat": null,
+    "lng": null,
+    "profile": "International profile",
+    "cityKey": "uppsala",
+    "municipality": "Uppsala",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://kvarngardesskolan.uppsala.se/omskolan/"
+      }
+    ]
+  },
+  {
+    "slug": "uppsala-bergaskolan",
+    "name": "Bergaskolan",
+    "type": "Municipal",
+    "grades": "F–6",
+    "area": "Uppsala",
+    "address": "Uppsala",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "uppsala",
+    "municipality": "Uppsala",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://bergaskolan.uppsala.se/om-skolan/"
+      }
+    ]
+  },
+  {
+    "slug": "uppsala-johannesbacksskolan",
+    "name": "Johannesbäcksskolan",
+    "type": "Municipal",
+    "grades": "F–6",
+    "area": "Uppsala",
+    "address": "Uppsala",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "uppsala",
+    "municipality": "Uppsala",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://johannesbacksskolan.uppsala.se/verksamheter/grundskola-f-6/"
+      }
+    ]
+  },
+  {
+    "slug": "uppsala-almtunaskolan",
+    "name": "Almtunaskolan",
+    "type": "Municipal",
+    "grades": "F–6",
+    "area": "Almtuna",
+    "address": "Uppsala",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "uppsala",
+    "municipality": "Uppsala",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://www.uppsala.se/skola-forskola-och-komvux/grundskola-och-fritids/hitta-sok-och-andra-plats/hitta-och-jamfor-grundskola/"
+      }
+    ]
+  },
+  {
+    "slug": "uppsala-pluggparadiset",
+    "name": "Pluggparadiset",
+    "type": "Municipal",
+    "grades": "F–6",
+    "area": "Uppsala",
+    "address": "Uppsala",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "uppsala",
+    "municipality": "Uppsala",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://pluggparadiset.uppsala.se/omskolan/valkommen-till-pluggparadiset/"
+      }
+    ]
+  },
+  {
+    "slug": "uppsala-stordammen",
+    "name": "Stordammen",
+    "type": "Municipal",
+    "grades": "F–9",
+    "area": "Sävja",
+    "address": "Uppsala",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "uppsala",
+    "municipality": "Uppsala",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://stordammen.uppsala.se/omskolan/"
+      }
+    ]
+  },
+  {
+    "slug": "uppsala-gavsta-skola",
+    "name": "Gåvsta skola",
+    "type": "Municipal",
+    "grades": "F–9",
+    "area": "Rasbo",
+    "address": "Uppsala kommun",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "uppsala",
+    "municipality": "Uppsala",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://gavstaskola.uppsala.se/verksamheter/"
+      }
+    ]
+  },
+  {
+    "slug": "uppsala-tuna-skola",
+    "name": "Tuna skola",
+    "type": "Municipal",
+    "grades": "F–9",
+    "area": "Tuna",
+    "address": "Uppsala kommun",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "uppsala",
+    "municipality": "Uppsala",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://tunaskola.uppsala.se/omskolan/"
+      }
+    ]
+  },
+  {
+    "slug": "uppsala-jarlasa-skola",
+    "name": "Järlåsa skola",
+    "type": "Municipal",
+    "grades": "F–6",
+    "area": "Järlåsa",
+    "address": "Uppsala kommun",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "uppsala",
+    "municipality": "Uppsala",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://www.uppsala.se/skola-forskola-och-komvux/grundskola-och-fritids/hitta-sok-och-andra-plats/hitta-och-jamfor-grundskola/"
+      }
+    ]
+  },
+  {
+    "slug": "uppsala-fridhemsskolan",
+    "name": "Ansgarskolorna Fridhemsskolan",
+    "type": "Fristående",
+    "grades": "F–6",
+    "area": "Uppsala",
+    "address": "Uppsala",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "uppsala",
+    "municipality": "Uppsala",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://www.uppsala.se/skola-forskola-och-komvux/grundskola-och-fritids/hitta-sok-och-andra-plats/hitta-och-jamfor-grundskola/"
+      }
+    ]
+  },
+  {
+    "slug": "uppsala-sverkerskolan",
+    "name": "Sverkerskolan",
+    "type": "Municipal",
+    "grades": "F–9",
+    "area": "Uppsala",
+    "address": "Uppsala",
+    "lat": null,
+    "lng": null,
+    "profile": "Official city school directory fallback",
+    "cityKey": "uppsala",
+    "municipality": "Uppsala",
+    "postalCode": null,
+    "registrySource": "Bundled city baseline",
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Bundled fallback record from an official municipal school directory. Live Skolverket registry sync can replace and enrich this record.",
+    "decisionNote": "School directory record. Ratings, academic indicators and admission details appear only when separately imported and verified.",
+    "sources": [
+      {
+        "label": "Official school page",
+        "url": "https://sverkerskolan.uppsala.se/nyheter/fragor-och-svar-om-mellanstadiet/"
+      }
+    ]
+  }
+]
