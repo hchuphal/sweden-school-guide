@@ -4,13 +4,13 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Sweden School Guide</title>
-  <meta name="description" content="School-choice guide for families in Sweden, starting with Göteborg." />
+  <meta name="description" content="School-choice guide for families in Sweden." />
   <link rel="stylesheet" href="/assets/styles.css" />
 </head>
 <body>
   <header class="hero">
     <nav class="nav">
-      <div class="brand"><span class="brand-mark">SE</span><span class="brand-text"><span class="brand-title">Sweden School Guide</span><span class="brand-subtitle">Starting with Göteborg</span></span></div>
+      <div class="brand"><span class="brand-mark" aria-hidden="true"><span class="mark-main">S</span><span class="mark-dot">✓</span></span><span class="brand-text"><span class="brand-title">Sweden School Guide</span></span></div>
       <div class="nav-links">
         <a href="#directory">Directory</a>
         <a href="#nearby">Nearby</a>
@@ -22,9 +22,9 @@
 
     <section class="hero-content">
       <div>
-        <p class="eyebrow">MVP v0.9 · collapsible insight blocks · Sweden-wide shell · F0/F–9</p>
-        <h1>Compare schools in Sweden, starting with Göteborg.</h1>
-        <p class="lede">Built for families choosing förskoleklass and primary school. The app currently ships with Göteborg data, separates survey ratings, academic results and admission realism, and calculates quality scores from transparent weighted fields.</p>
+        <p class="eyebrow">MVP v0.10 · generic Sweden shell · collapsible school data · F0/F–9</p>
+        <h1>Compare schools in Sweden.</h1>
+        <p class="lede">Built for families choosing förskoleklass and primary school. Select a city to explore available school data. The app separates survey ratings, academic results and admission realism, and calculates quality scores from transparent weighted fields.</p>
         <div class="hero-actions">
           <a class="button primary" href="#nearby">Find nearby schools</a>
           <a class="button secondary" href="#compare">Compare schools</a>
@@ -39,7 +39,7 @@
               <option value="uppsala">Uppsala (coming soon)</option>
             </select>
           </label>
-          <p id="cityHelper" class="city-helper">Current dataset: Göteborg. The city selector is ready for future expansion.</p>
+          <p id="cityHelper" class="city-helper">Current dataset: Göteborg.</p>
         </div>
       </div>
       <div class="hero-card">
@@ -178,7 +178,7 @@
   </main>
 
   <footer class="footer">
-    <p>Built as MVP v0.9. Backend API + SQLite database + current-year data mode + Skolenkäten importer + collapsible survey/academic/admission sections.</p>
+    <p>Built as MVP v0.10. Backend API + SQLite database + current-year data mode + Skolenkäten importer + collapsible survey/academic/admission sections.</p>
     <p><a href="/api/metadata">API metadata</a> · <a href="/assets/README.md">README</a></p>
   </footer>
 

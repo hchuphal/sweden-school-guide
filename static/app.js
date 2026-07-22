@@ -205,11 +205,11 @@ function updateCityNotice() {
   const helper = $("cityHelper");
   if (!select || !helper) return;
   if (select.value === SUPPORTED_CITY) {
-    helper.textContent = "Current dataset: Göteborg. The city selector is ready for future expansion.";
+    helper.textContent = "Current dataset: Göteborg.";
     helper.classList.remove("warn");
   } else {
     const label = select.options[select.selectedIndex]?.textContent || "Selected city";
-    helper.textContent = `${label} is not loaded yet. Showing Göteborg data for now.`;
+    helper.textContent = `${label}: coming soon. Current dataset: Göteborg.`;
     helper.classList.add("warn");
   }
 }
