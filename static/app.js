@@ -17,6 +17,9 @@ const CITY_CENTERS = {
 let lastNearbyOrigin = CITY_CENTERS.goteborg;
 let cityReloadTimer = null;
 let cityReloadAttempts = 0;
+let activeCityKey = "goteborg";
+let cityLoadEpoch = 0;
+let cityFetchController = null;
 
 const $ = (id) => document.getElementById(id);
 
@@ -280,7 +283,7 @@ function renderDirectory() {
   const mode = $("sortFilter").value;
   $("sortNote").textContent = sortNote(mode);
   const list = filteredSchools();
-  const cityKey = $("citySelect")?.value || "goteborg";
+  const cityKey = activeCityKey || $("citySelect")?.value || "goteborg";
   const cityLabel = CITY_LABELS[cityKey] || "Selected city";
   $("directoryTitle").textContent = `${cityLabel} school directory`;
   const qualityCount = schools.filter(s => Number(s.dataCompletenessPct || 0) > 0).length;
@@ -289,16 +292,21 @@ function renderDirectory() {
     : `No schools loaded yet for ${cityLabel}`;
 
   const surveySync = currentCityPayload?.surveySync || metadata?.surveySync || {};
+  const status = $("directoryStatus");
   let surveyNotice = "";
   if (schools.length && qualityCount === 0 && surveySync.status === "running") {
-    surveyNotice = `<div class="notice"><strong>Adding national survey data:</strong> the app is matching the official 2026 and 2025 Skolenkäten files to ${escapeHtml(cityLabel)} schools. Cards refresh automatically.</div>`;
+    surveyNotice = `<strong>Adding national survey data:</strong> the app is matching the official 2026 and 2025 Skolenkäten files to ${escapeHtml(cityLabel)} schools. Cards refresh automatically.`;
   } else if (schools.length && qualityCount === 0 && surveySync.status === "failed") {
-    surveyNotice = `<div class="notice"><strong>Survey enrichment failed:</strong> ${escapeHtml(surveySync.error || "the official survey files could not be downloaded or matched")}. The school directory remains available, but quality scores stay n/a until a successful refresh.</div>`;
+    surveyNotice = `<strong>Survey enrichment failed:</strong> ${escapeHtml(surveySync.error || "the official survey files could not be downloaded or matched")}. The school directory remains available, but quality scores stay n/a until a successful refresh.`;
   } else if (schools.length && qualityCount === 0 && ["complete", "partial"].includes(surveySync.status)) {
-    surveyNotice = `<div class="notice"><strong>No matched quality metrics yet:</strong> the directory records are loaded, but none of these schools matched a published 2025/2026 survey or academic record. Missing or privacy-suppressed values remain n/a.</div>`;
+    surveyNotice = `<strong>No matched quality metrics yet:</strong> the directory records are loaded, but none of these schools matched a published 2025/2026 survey or academic record. Missing or privacy-suppressed values remain n/a.`;
+  }
+  if (status) {
+    status.hidden = !surveyNotice;
+    status.innerHTML = surveyNotice;
   }
   const cards = list.map(schoolCard).join("") || `<p class="empty">No schools match the current filters.</p>`;
-  $("schoolGrid").innerHTML = `${surveyNotice}${cards}`;
+  $("schoolGrid").innerHTML = cards;
 }
 
 async function renderNearby() {
@@ -484,8 +492,11 @@ function updateCompareDefaults() {
   });
 }
 
-function scheduleCityReload(cityKey, payload) {
+function scheduleCityReload(cityKey, payload, epoch = cityLoadEpoch) {
   if (cityReloadTimer) clearTimeout(cityReloadTimer);
+  if (cityKey !== activeCityKey || $("citySelect")?.value !== cityKey || epoch !== cityLoadEpoch) {
+    return;
+  }
   const registryStatus = payload?.registrySync?.status;
   const surveyStatus = payload?.surveySync?.status;
   const needsRegistry = !schools.length && (registryStatus === "running" || payload?.syncTriggered);
@@ -497,30 +508,67 @@ function scheduleCityReload(cityKey, payload) {
   }
   cityReloadAttempts += 1;
   cityReloadTimer = setTimeout(async () => {
+    if (cityKey !== activeCityKey || $("citySelect")?.value !== cityKey || epoch !== cityLoadEpoch) {
+      return;
+    }
     try {
-      await loadSchoolsForCity(cityKey, true);
+      await loadSchoolsForCity(cityKey, true, epoch);
     } catch (err) {
-      console.error(err);
+      if (err?.name !== "AbortError") console.error(err);
     }
   }, 3000);
 }
 
-async function loadSchoolsForCity(cityKey, isPoll = false) {
+async function loadSchoolsForCity(cityKey, isPoll = false, expectedEpoch = null) {
+  const selectedCity = $("citySelect")?.value || cityKey;
+  if (isPoll && (selectedCity !== cityKey || activeCityKey !== cityKey || expectedEpoch !== cityLoadEpoch)) {
+    return null;
+  }
+
+  let requestEpoch;
   if (!isPoll) {
+    activeCityKey = cityKey;
+    cityLoadEpoch += 1;
+    requestEpoch = cityLoadEpoch;
     cityReloadAttempts = 0;
     if (cityReloadTimer) clearTimeout(cityReloadTimer);
+    if (cityFetchController) cityFetchController.abort();
+    currentCityPayload = null;
+    schools = [];
+    const status = $("directoryStatus");
+    if (status) status.hidden = true;
     $("schoolGrid").innerHTML = `<p class="empty">Loading ${escapeHtml(CITY_LABELS[cityKey] || cityKey)} schools…</p>`;
     $("directoryTitle").textContent = `${CITY_LABELS[cityKey] || "Selected city"} school directory`;
     $("directoryMeta").textContent = "Loading official school records…";
+  } else {
+    requestEpoch = expectedEpoch ?? cityLoadEpoch;
   }
+
+  const controller = new AbortController();
+  cityFetchController = controller;
   const schoolsResponse = await fetch(
     `/api/schools?year=${encodeURIComponent(YEAR_MODE)}&city=${encodeURIComponent(cityKey)}&_=${Date.now()}`,
-    { cache: "no-store" }
+    { cache: "no-store", signal: controller.signal }
   );
   if (!schoolsResponse.ok) throw new Error("Could not load school data");
   const payload = await schoolsResponse.json();
+
+  // A previous city request may finish after the user has switched cities. Never
+  // let that stale response replace the currently selected directory.
+  if (requestEpoch !== cityLoadEpoch || cityKey !== activeCityKey || $("citySelect")?.value !== cityKey) {
+    return null;
+  }
+  if (payload.city !== cityKey) {
+    throw new Error(`The backend returned ${payload.city || "another city"} while ${cityKey} was requested.`);
+  }
+  const returnedSchools = payload.schools || [];
+  const mismatched = returnedSchools.filter(school => school.cityKey && school.cityKey !== cityKey);
+  if (mismatched.length) {
+    throw new Error(`The backend returned ${mismatched.length} school record(s) from another city.`);
+  }
+
   currentCityPayload = payload;
-  schools = payload.schools || [];
+  schools = returnedSchools;
   updateDataMode(payload);
   $("schoolNames").innerHTML = schools.map(s => `<option value="${escapeHtml(s.name)}"></option>`).join("");
   lastNearbyOrigin = CITY_CENTERS[cityKey] || lastNearbyOrigin;
@@ -531,21 +579,26 @@ async function loadSchoolsForCity(cityKey, isPoll = false) {
   if (!schools.length) {
     const sync = payload.registrySync || {};
     const cityLabel = CITY_LABELS[cityKey] || cityKey;
+    const status = $("directoryStatus");
+    let message;
     if (sync.status === "running" || payload.syncTriggered) {
-      $("schoolGrid").innerHTML = `<div class="notice"><strong>Loading ${escapeHtml(cityLabel)} schools:</strong> the official Skolverket registry sync is running. This page will retry automatically.</div>`;
+      message = `<strong>Loading ${escapeHtml(cityLabel)} schools:</strong> the official Skolverket registry sync is running. This page will retry automatically.`;
     } else if (sync.status === "failed") {
-      $("schoolGrid").innerHTML = `<div class="notice"><strong>Registry sync failed:</strong> ${escapeHtml(sync.error || "Could not download the official school register.")} Redeploy or retry later.</div>`;
+      message = `<strong>Registry sync failed:</strong> ${escapeHtml(sync.error || "Could not download the official school register.")} Redeploy or retry later.`;
     } else {
-      const sync = metadata?.registrySync || {};
-      const reason = sync.status === "failed"
-        ? `The live registry refresh failed: ${escapeHtml(sync.error || "unknown error")}.`
+      const currentSync = metadata?.registrySync || {};
+      const reason = currentSync.status === "failed"
+        ? `The live registry refresh failed: ${escapeHtml(currentSync.error || "unknown error")}.`
         : "No bundled or live registry records are available for this city.";
-      $("schoolGrid").innerHTML = `<div class="notice"><strong>No schools loaded for ${escapeHtml(cityLabel)}.</strong> ${reason}</div>`;
+      message = `<strong>No schools loaded for ${escapeHtml(cityLabel)}.</strong> ${reason}`;
     }
-    scheduleCityReload(cityKey, payload);
-  } else {
-    scheduleCityReload(cityKey, payload);
+    if (status) {
+      status.hidden = false;
+      status.innerHTML = message;
+    }
+    $("schoolGrid").innerHTML = "";
   }
+  scheduleCityReload(cityKey, payload, requestEpoch);
   return payload;
 }
 
@@ -578,6 +631,7 @@ async function init() {
     try {
       await loadSchoolsForCity($("citySelect").value);
     } catch (err) {
+      if (err?.name === "AbortError") return;
       $("schoolGrid").innerHTML = `<p class="empty">Could not load the selected city: ${escapeHtml(err.message)}</p>`;
     }
   });

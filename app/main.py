@@ -34,7 +34,7 @@ DB_PATH = Path(os.getenv("SCHOOLGUIDE_DB_PATH", DATA_DIR / "schoolguide.sqlite")
 DEFAULT_YEAR_MODE = os.getenv("DEFAULT_YEAR_MODE", "current").strip().lower()
 BASELINE_FILE = DATA_DIR / "schools-2026.json"
 GEOCODER_URL = os.getenv("GEOCODER_URL", "https://nominatim.openstreetmap.org/search")
-GEOCODER_USER_AGENT = os.getenv("GEOCODER_USER_AGENT", "SwedenSchoolGuide/0.18")
+GEOCODER_USER_AGENT = os.getenv("GEOCODER_USER_AGENT", "SwedenSchoolGuide/0.19")
 GEOCODER_EMAIL = os.getenv("GEOCODER_EMAIL", "").strip()
 SCHOOL_REGISTRY_URL = os.getenv(
     "SCHOOL_REGISTRY_URL",
@@ -78,9 +78,9 @@ CITY_CONFIG = {
         "search_aliases": {"uppsala"},
     },
 }
-APP_VERSION = "0.18.0"
+APP_VERSION = "0.19.0"
 
-QUALITY_METHOD_VERSION = "v0.18 two-year national survey matching, strict postcode geocoding and substantive-data confidence"
+QUALITY_METHOD_VERSION = "v0.19 city-isolated directory loading, two-year national survey matching and strict postcode geocoding"
 MISSING_VALUE_BASELINE = 6.5
 
 QUALITY_COMPONENTS = [
@@ -1268,6 +1268,10 @@ def schools_api(
         quality_metric_count = 0
         registry_only_count = 0
         requested_year, _year_mode = resolve_year_param(conn, year)
+        if city_key != "all":
+            wrong_city_rows = [row for row in school_rows if row["city_key"] != city_key]
+            if wrong_city_rows:
+                raise HTTPException(status_code=500, detail="City isolation check failed for school directory")
         for school in school_rows:
             metric, fallback, requested_metric_year = metric_row_for(conn, school["slug"], year)
             if metric:

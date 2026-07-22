@@ -1,4 +1,4 @@
-# Sweden School Guide MVP v0.18
+# Sweden School Guide MVP v0.19
 
 FastAPI + SQLite web application for comparing schools in four selectable datasets:
 
@@ -7,7 +7,14 @@ FastAPI + SQLite web application for comparing schools in four selectable datase
 - Malmö
 - Uppsala
 
-## What changed in v0.18
+## What changed in v0.19
+
+- City directory requests are now cancellable and protected by a request generation token.
+- A delayed background refresh from Uppsala, Malmö or another city can no longer overwrite the currently selected city.
+- The frontend validates both the response city and every returned school city key before rendering.
+- The backend also asserts city isolation for `/api/schools`.
+- Survey-sync notices now appear above the card grid instead of becoming the first grid card.
+
 
 ### National survey-data correction
 
@@ -36,7 +43,7 @@ FastAPI + SQLite web application for comparing schools in four selectable datase
 
 ## Data interpretation
 
-Skolenkäten provides survey indicators. Academic results and admission realism are separate datasets. They remain `n/a` when no verified academic-statistics or municipality/school admission import exists; v0.18 does not invent values.
+Skolenkäten provides survey indicators. Academic results and admission realism are separate datasets. They remain `n/a` when no verified academic-statistics or municipality/school admission import exists; v0.19 does not invent values.
 
 Some published survey cells may also remain `n/a` because a school did not participate in either loaded year or because the authority suppresses results based on too few responses.
 

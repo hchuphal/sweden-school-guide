@@ -193,3 +193,5 @@ input:focus, select:focus { outline: 3px solid rgba(40,75,99,.16); border-color:
 .notice span { color: inherit; opacity: .88; }
 
 .directory-meta { margin: 8px 0 0; color: var(--muted); font-weight: 700; }
+
+.directory-status { margin: 0 0 18px; }
