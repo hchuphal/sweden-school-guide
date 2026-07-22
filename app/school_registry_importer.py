@@ -6,7 +6,7 @@ import re
 import unicodedata
 from datetime import datetime, timezone
 from typing import Any, Iterable
-from urllib.parse import urljoin
+from urllib.parse import parse_qsl, urlencode, urljoin, urlsplit, urlunsplit
 
 import requests
 
@@ -95,23 +95,50 @@ def extract_items(payload: Any) -> list[dict[str, Any]]:
     return max(candidates, key=len) if candidates else []
 
 
+def _next_page_from_metadata(payload: dict[str, Any], current_url: str) -> str | None:
+    """Build a next-page URL for common Spring/JSON-API pagination shapes."""
+    page_blocks = [payload.get("page"), payload.get("meta"), payload.get("pagination")]
+    for block in page_blocks:
+        if not isinstance(block, dict):
+            continue
+        current = block.get("number", block.get("page", block.get("currentPage")))
+        total = block.get("totalPages", block.get("total_pages", block.get("pageCount")))
+        last = block.get("last")
+        try:
+            current_i = int(current)
+            total_i = int(total) if total is not None else None
+        except (TypeError, ValueError):
+            continue
+        if last is True or (total_i is not None and current_i + 1 >= total_i):
+            return None
+        parts = urlsplit(current_url)
+        query = dict(parse_qsl(parts.query, keep_blank_values=True))
+        page_param = "page"
+        for candidate in ("page", "pageNumber", "page_number", "number"):
+            if candidate in query:
+                page_param = candidate
+                break
+        query[page_param] = str(current_i + 1)
+        return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
+    return None
+
+
 def next_link(payload: Any, current_url: str) -> str | None:
     if not isinstance(payload, dict):
         return None
-    candidates: list[Any] = [payload.get("next")]
+    candidates: list[Any] = [payload.get("next"), payload.get("nextPage")]
     links = payload.get("links") or payload.get("_links")
     if isinstance(links, dict):
         candidates.extend([links.get("next"), links.get("nextPage")])
-    page = payload.get("page") or payload.get("meta")
+    page = payload.get("page") or payload.get("meta") or payload.get("pagination")
     if isinstance(page, dict):
-        candidates.append(page.get("next"))
+        candidates.extend([page.get("next"), page.get("nextPage")])
     for candidate in candidates:
         if isinstance(candidate, dict):
             candidate = candidate.get("href") or candidate.get("url")
         if isinstance(candidate, str) and candidate.strip():
             return urljoin(current_url, candidate.strip())
-    return None
-
+    return _next_page_from_metadata(payload, current_url)
 
 def fetch_school_units(url: str, user_agent: str, max_pages: int = 100) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     headers = {"Accept": "application/json", "User-Agent": user_agent}

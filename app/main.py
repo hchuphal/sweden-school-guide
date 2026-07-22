@@ -19,6 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from app.school_registry_importer import build_records as build_registry_records, fetch_school_units
 
 from app.skolenkaten_importer import (
+    SKOLENKATEN_URLS,
     build_skolenkaten_import,
     ensure_source_files,
     load_baseline,
@@ -33,7 +34,7 @@ DB_PATH = Path(os.getenv("SCHOOLGUIDE_DB_PATH", DATA_DIR / "schoolguide.sqlite")
 DEFAULT_YEAR_MODE = os.getenv("DEFAULT_YEAR_MODE", "current").strip().lower()
 BASELINE_FILE = DATA_DIR / "schools-2026.json"
 GEOCODER_URL = os.getenv("GEOCODER_URL", "https://nominatim.openstreetmap.org/search")
-GEOCODER_USER_AGENT = os.getenv("GEOCODER_USER_AGENT", "SwedenSchoolGuide/0.17")
+GEOCODER_USER_AGENT = os.getenv("GEOCODER_USER_AGENT", "SwedenSchoolGuide/0.18")
 GEOCODER_EMAIL = os.getenv("GEOCODER_EMAIL", "").strip()
 SCHOOL_REGISTRY_URL = os.getenv(
     "SCHOOL_REGISTRY_URL",
@@ -42,8 +43,12 @@ SCHOOL_REGISTRY_URL = os.getenv(
 AUTO_IMPORT_SCHOOL_REGISTRY = os.getenv("AUTO_IMPORT_SCHOOL_REGISTRY", "true").strip().lower() in {"1", "true", "yes", "on"}
 AUTO_IMPORT_SKOLENKATEN = os.getenv("AUTO_IMPORT_SKOLENKATEN", "true").strip().lower() in {"1", "true", "yes", "on"}
 REGISTRY_SYNC_RETRY_SECONDS = int(os.getenv("REGISTRY_SYNC_RETRY_SECONDS", "120"))
+SURVEY_SYNC_RETRY_SECONDS = int(os.getenv("SURVEY_SYNC_RETRY_SECONDS", "300"))
+GEOCODER_CACHE_VERSION = "v3-postcode-strict"
 _REGISTRY_SYNC_LOCK = threading.Lock()
+_SURVEY_SYNC_LOCK = threading.Lock()
 _LAST_REGISTRY_SYNC_START = 0.0
+_LAST_SURVEY_SYNC_START = 0.0
 CITY_CONFIG = {
     "goteborg": {
         "label": "Göteborg",
@@ -73,9 +78,9 @@ CITY_CONFIG = {
         "search_aliases": {"uppsala"},
     },
 }
-APP_VERSION = "0.17.0"
+APP_VERSION = "0.18.0"
 
-QUALITY_METHOD_VERSION = "v0.17 bundled city baselines, Noblaskolan coverage, registry refresh and national surveys"
+QUALITY_METHOD_VERSION = "v0.18 two-year national survey matching, strict postcode geocoding and substantive-data confidence"
 MISSING_VALUE_BASELINE = 6.5
 
 QUALITY_COMPONENTS = [
@@ -136,6 +141,17 @@ METRIC_FIELDS = [
     "support", "studentSatisfaction", "parentSatisfaction", "academicSignal", "academicScore",
     "decisionNote", "lastVerified", "verificationNote"
 ]
+
+SUBSTANTIVE_METRIC_FIELDS = [
+    "admissionScore", "f0Satisfaction", "safety", "studyPeace", "support",
+    "studentSatisfaction", "parentSatisfaction", "academicScore"
+]
+QUALITY_SIGNAL_FIELDS = [
+    "f0Satisfaction", "safety", "studyPeace", "support",
+    "studentSatisfaction", "parentSatisfaction", "academicScore"
+]
+SUBSTANTIVE_SQL = " OR ".join(f"{field} IS NOT NULL" for field in SUBSTANTIVE_METRIC_FIELDS)
+QUALITY_SIGNAL_SQL = " OR ".join(f"{field} IS NOT NULL" for field in QUALITY_SIGNAL_FIELDS)
 
 
 def now_iso() -> str:
@@ -457,21 +473,26 @@ def resolve_year_param(conn: sqlite3.Connection, year_param: str | None) -> tupl
 
 
 def metric_row_for(conn: sqlite3.Connection, slug: str, year_param: str | None) -> tuple[sqlite3.Row | None, bool, int | None]:
+    """Return the newest row that contains actual rating, academic or admission data.
+
+    Earlier versions treated a row containing only a verification date as rating data.
+    That blocked the intended 2025 fallback and produced cards labelled 2026 with 0% data.
+    """
     requested_year, _mode = resolve_year_param(conn, year_param)
     if requested_year is None:
         return None, False, None
 
     exact = conn.execute(
-        "SELECT * FROM school_year_metrics WHERE slug=? AND year=?",
+        f"SELECT * FROM school_year_metrics WHERE slug=? AND year=? AND ({SUBSTANTIVE_SQL})",
         (slug, requested_year),
     ).fetchone()
     if exact:
         return exact, False, requested_year
 
     fallback = conn.execute(
-        """
+        f"""
         SELECT * FROM school_year_metrics
-        WHERE slug=? AND year < ?
+        WHERE slug=? AND year < ? AND ({SUBSTANTIVE_SQL})
         ORDER BY year DESC
         LIMIT 1
         """,
@@ -481,10 +502,10 @@ def metric_row_for(conn: sqlite3.Connection, slug: str, year_param: str | None) 
         return fallback, True, requested_year
 
     any_year = conn.execute(
-        "SELECT * FROM school_year_metrics WHERE slug=? ORDER BY year DESC LIMIT 1",
+        f"SELECT * FROM school_year_metrics WHERE slug=? AND ({SUBSTANTIVE_SQL}) ORDER BY year DESC LIMIT 1",
         (slug,),
     ).fetchone()
-    return any_year, bool(any_year), requested_year
+    return any_year, bool(any_year and requested_year and any_year["year"] != requested_year), requested_year
 
 
 def combine_school_and_metric(school: sqlite3.Row, metric: sqlite3.Row, is_fallback: bool, requested_year: int | None) -> dict[str, Any]:
@@ -626,73 +647,153 @@ def upsert_registry_schools(records: Iterable[dict[str, Any]], source_label: str
 
 
 def database_baseline(year: int) -> list[dict[str, Any]]:
+    """Build a survey-import baseline for every bundled or registry school.
+
+    School-unit IDs are optional because the survey importer can also match
+    conservatively by school name plus municipality.
+    """
     with db() as conn:
-        rows = conn.execute(
-            """
-            SELECT s.*, m.* FROM schools s
-            LEFT JOIN school_year_metrics m ON m.slug=s.slug AND m.year=?
-            WHERE s.school_unit_id IS NOT NULL
-            """,
-            (year,),
-        ).fetchall()
-    result: list[dict[str, Any]] = []
-    for row in rows:
-        item = {
-            "slug": row["slug"], "name": row["name"], "type": row["type"], "grades": row["grades"],
-            "area": row["area"], "address": row["address"], "lat": row["lat"], "lng": row["lng"],
-            "profile": row["profile"], "schoolUnitId": row["school_unit_id"], "cityKey": row["city_key"],
-            "municipality": row["municipality"], "postalCode": row["postal_code"],
-            "registrySource": row["registry_source"], "sources": json.loads(row["sources_json"] or "[]"),
-            "dataYear": year,
-        }
-        for field in METRIC_FIELDS:
-            if field in row.keys():
-                item[field] = row[field]
-        result.append(item)
+        schools = conn.execute("SELECT * FROM schools ORDER BY city_key, name").fetchall()
+        result: list[dict[str, Any]] = []
+        for school in schools:
+            metric = conn.execute(
+                "SELECT * FROM school_year_metrics WHERE slug=? AND year=?",
+                (school["slug"], year),
+            ).fetchone()
+            item = {
+                "slug": school["slug"], "name": school["name"], "type": school["type"],
+                "grades": school["grades"], "area": school["area"], "address": school["address"],
+                "lat": school["lat"], "lng": school["lng"], "profile": school["profile"],
+                "schoolUnitId": school["school_unit_id"], "cityKey": school["city_key"],
+                "municipality": school["municipality"], "postalCode": school["postal_code"],
+                "registrySource": school["registry_source"],
+                "sources": json.loads(school["sources_json"] or "[]"), "dataYear": year,
+            }
+            if metric:
+                for field in METRIC_FIELDS:
+                    item[field] = metric[field]
+            result.append(item)
     return result
 
 
-def run_registry_sync(import_surveys: bool = True) -> dict[str, Any]:
+def run_registry_sync(import_surveys: bool = False) -> dict[str, Any]:
+    """Refresh school-unit facts for the four configured city datasets.
+
+    Survey enrichment is deliberately a separate job. A registry outage must not
+    prevent the 2025/2026 survey files from enriching the bundled city records.
+    """
     year = datetime.now(timezone.utc).year
     set_state("registry_sync", {"status": "running", "startedAt": now_iso()})
     try:
         items, fetch_meta = fetch_school_units(SCHOOL_REGISTRY_URL, GEOCODER_USER_AGENT)
         records, parse_meta = build_registry_records(items, CITY_CONFIG, year)
         imported = upsert_registry_schools(records, "Skolverket school-unit register", year)
-        survey_imported = 0
-        survey_error = None
-        if import_surveys and records:
-            try:
-                cache_dir = DATA_DIR / "source_cache" / "skolenkaten"
-                baseline = database_baseline(year)
-                source_files = ensure_source_files(year, cache_dir, use_network=True)
-                survey_records, survey_meta = build_skolenkaten_import(baseline, source_files, year=year)
-                output_path = IMPORT_DIR / f"schools-{year}-skolenkaten-four-cities.json"
-                write_import_json(survey_records, output_path, survey_meta)
-                survey_imported = upsert_schools(survey_records, output_path.name)
-            except Exception as exc:  # Registry data should remain usable even if survey import fails.
-                survey_error = str(exc)
         result = {
-            "status": "complete", "year": year, "registryImported": imported,
-            "surveyImported": survey_imported, "surveyError": survey_error,
-            "fetch": fetch_meta, "parse": parse_meta, "finishedAt": now_iso(),
+            "status": "complete",
+            "year": year,
+            "registryImported": imported,
+            "fetch": fetch_meta,
+            "parse": parse_meta,
+            "finishedAt": now_iso(),
         }
         set_state("registry_sync", result)
-        return result
     except Exception as exc:
         result = {"status": "failed", "error": str(exc), "finishedAt": now_iso()}
         set_state("registry_sync", result)
+
+    # Keep this compatibility flag for the existing admin endpoint, but run the
+    # survey job independently so a registry failure cannot suppress it.
+    if import_surveys and AUTO_IMPORT_SKOLENKATEN:
+        result["surveySyncStarted"] = start_background_survey_if_needed(force=True)
+    return result
+
+
+def run_survey_sync(years: list[int] | None = None) -> dict[str, Any]:
+    """Import the two-year national Skolenkäten cycle for all loaded schools."""
+    configured_years = sorted(SKOLENKATEN_URLS.keys(), reverse=True)
+    selected_years = [int(year) for year in (years or configured_years) if int(year) in SKOLENKATEN_URLS]
+    if not selected_years:
+        result = {"status": "failed", "error": "No supported Skolenkäten years were requested.", "finishedAt": now_iso()}
+        set_state("survey_sync", result)
         return result
+
+    set_state("survey_sync", {"status": "running", "years": selected_years, "startedAt": now_iso()})
+    per_year: list[dict[str, Any]] = []
+    total_applied = 0
+    successful_years = 0
+    for year in selected_years:
+        try:
+            cache_dir = DATA_DIR / "source_cache" / "skolenkaten"
+            baseline = database_baseline(year)
+            source_files = ensure_source_files(year, cache_dir, use_network=True)
+            records, import_metadata = build_skolenkaten_import(baseline, source_files, year=year)
+            output_path = IMPORT_DIR / f"schools-{year}-skolenkaten-four-cities.json"
+            write_import_json(records, output_path, import_metadata)
+            applied = upsert_schools(records, output_path.name)
+            matched = int(import_metadata.get("matchedSchools") or 0)
+            per_year.append({
+                "year": year,
+                "status": "complete",
+                "appliedRecords": applied,
+                "matchedSchools": matched,
+                "matchedById": int(import_metadata.get("matchedById") or 0),
+                "matchedByNameAndMunicipality": int(import_metadata.get("matchedByNameAndMunicipality") or 0),
+                "output": str(output_path.relative_to(ROOT)),
+            })
+            total_applied += applied
+            successful_years += 1
+        except Exception as exc:
+            per_year.append({"year": year, "status": "failed", "error": str(exc)})
+
+    if successful_years == len(selected_years):
+        status = "complete"
+    elif successful_years:
+        status = "partial"
+    else:
+        status = "failed"
+    result = {
+        "status": status,
+        "years": selected_years,
+        "appliedRecords": total_applied,
+        "results": per_year,
+        "error": None if successful_years else "All configured Skolenkäten downloads/imports failed.",
+        "finishedAt": now_iso(),
+    }
+    set_state("survey_sync", result)
+    return result
+
+
+def start_background_survey_if_needed(force: bool = False) -> bool:
+    global _LAST_SURVEY_SYNC_START
+    if not AUTO_IMPORT_SKOLENKATEN:
+        return False
+    with _SURVEY_SYNC_LOCK:
+        state = get_state("survey_sync") or {}
+        if state.get("status") == "running":
+            return False
+        now_mono = time.monotonic()
+        if now_mono - _LAST_SURVEY_SYNC_START < SURVEY_SYNC_RETRY_SECONDS:
+            return False
+        if not force and state.get("status") in {"complete", "partial"}:
+            return False
+        _LAST_SURVEY_SYNC_START = now_mono
+        threading.Thread(target=run_survey_sync, daemon=True).start()
+        return True
+
+
+def _run_startup_sync_pipeline() -> None:
+    """Run registry first for IDs/coordinates, then survey even if registry failed."""
+    run_registry_sync(import_surveys=False)
+    if AUTO_IMPORT_SKOLENKATEN:
+        start_background_survey_if_needed(force=True)
 
 
 def start_background_sync_if_needed(force: bool = False) -> bool:
-    """Start one registry sync thread, with a retry cooldown.
-
-    `force=True` is used when a selected city has no directory records even if
-    another city already has registry data.
-    """
+    """Start one registry refresh pipeline with a retry cooldown."""
     global _LAST_REGISTRY_SYNC_START
     if not AUTO_IMPORT_SCHOOL_REGISTRY:
+        if AUTO_IMPORT_SKOLENKATEN:
+            return start_background_survey_if_needed(force=force)
         return False
     with _REGISTRY_SYNC_LOCK:
         state = get_state("registry_sync") or {}
@@ -706,17 +807,11 @@ def start_background_sync_if_needed(force: bool = False) -> bool:
                 count = conn.execute(
                     "SELECT COUNT(*) AS n FROM schools WHERE registry_source='Skolverket school-unit register'"
                 ).fetchone()["n"]
-            if count > 0:
+            if count > 0 and (get_state("survey_sync") or {}).get("status") in {"complete", "partial"}:
                 return False
         _LAST_REGISTRY_SYNC_START = now_mono
-        thread = threading.Thread(
-            target=run_registry_sync,
-            kwargs={"import_surveys": AUTO_IMPORT_SKOLENKATEN},
-            daemon=True,
-        )
-        thread.start()
+        threading.Thread(target=_run_startup_sync_pipeline, daemon=True).start()
         return True
-
 
 def normalize_location_text(value: str | None) -> str:
     clean = (value or "").strip().lower()
@@ -725,8 +820,21 @@ def normalize_location_text(value: str | None) -> str:
     return re.sub(r"\s+", " ", clean).strip()
 
 
+POSTCODE_RE = re.compile(r"(?<!\d)(\d{3})\s?(\d{2})(?!\d)")
+
+
+def extract_postcode_digits(value: str | None) -> str | None:
+    match = POSTCODE_RE.search(value or "")
+    return "".join(match.groups()) if match else None
+
+
+def result_postcode_digits(result: dict[str, Any]) -> str | None:
+    address = result.get("address") or {}
+    return extract_postcode_digits(str(address.get("postcode") or ""))
+
+
 def geocode_cache_key(query: str, city_key: str) -> str:
-    return f"{city_key}:{normalize_location_text(query)}"
+    return f"{GEOCODER_CACHE_VERSION}:{city_key}:{normalize_location_text(query)}"
 
 
 def result_locality_values(result: dict[str, Any]) -> list[str]:
@@ -770,6 +878,16 @@ def detected_municipality(result: dict[str, Any]) -> str | None:
     )
 
 
+def _geocode_result_rank(result: dict[str, Any], selected_city: str, requested_postcode: str | None) -> tuple[int, int, float]:
+    exact_postcode = int(bool(requested_postcode and result_postcode_digits(result) == requested_postcode))
+    selected_city_match = int(result_matches_city(result, selected_city))
+    try:
+        importance = float(result.get("importance") or 0)
+    except (TypeError, ValueError):
+        importance = 0.0
+    return exact_postcode, selected_city_match, importance
+
+
 def fetch_geocode(query: str, city_key: str) -> dict[str, Any]:
     clean_query = query.strip()
     if not clean_query:
@@ -787,49 +905,63 @@ def fetch_geocode(query: str, city_key: str) -> dict[str, Any]:
             payload["cached"] = True
             return payload
 
+    requested_postcode = extract_postcode_digits(clean_query)
     normalized_query = normalize_location_text(clean_query)
     city_label = CITY_CONFIG[city_key]["label"]
     has_country = "sweden" in normalized_query or "sverige" in normalized_query
-    has_city = any(alias in normalized_query for alias in {normalize_location_text(v) for v in CITY_CONFIG[city_key].get("search_aliases", set())})
+    has_selected_city = any(
+        alias in normalized_query
+        for alias in {normalize_location_text(v) for v in CITY_CONFIG[city_key].get("search_aliases", set())}
+    )
 
-    search_candidates: list[str] = []
-    base_query = clean_query if has_country else f"{clean_query}, Sweden"
-    search_candidates.append(base_query)
-    if not has_city:
-        city_query = f"{clean_query}, {city_label}, Sweden"
-        if city_query not in search_candidates:
-            search_candidates.append(city_query)
-
-    headers = {
-        "User-Agent": GEOCODER_USER_AGENT,
-        "Accept": "application/json",
+    base_params: dict[str, Any] = {
+        "format": "jsonv2",
+        "addressdetails": 1,
+        "limit": 10,
+        "countrycodes": "se",
+        "accept-language": "sv,en",
     }
+    if GEOCODER_EMAIL:
+        base_params["email"] = GEOCODER_EMAIL
+
+    request_params: list[dict[str, Any]] = []
+    if requested_postcode:
+        # Nominatim structured searches cannot be combined with q. This query
+        # makes a postcode-only lookup deterministic and avoids unrelated POIs.
+        request_params.append({**base_params, "postalcode": requested_postcode, "country": "Sweden"})
+    if not has_selected_city:
+        request_params.append({**base_params, "q": f"{clean_query}, {city_label}, Sweden"})
+    request_params.append({
+        **base_params,
+        "q": clean_query if has_country else f"{clean_query}, Sweden",
+    })
+
+    headers = {"User-Agent": GEOCODER_USER_AGENT, "Accept": "application/json"}
     results: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
     provider_status: int | None = None
     try:
-        for search_query in search_candidates:
-            params: dict[str, Any] = {
-                "q": search_query,
-                "format": "jsonv2",
-                "addressdetails": 1,
-                "limit": 5,
-                "countrycodes": "se",
-                "accept-language": "sv,en",
-            }
-            if GEOCODER_EMAIL:
-                params["email"] = GEOCODER_EMAIL
+        for params in request_params:
             response = requests.get(GEOCODER_URL, params=params, headers=headers, timeout=15)
             provider_status = response.status_code
             response.raise_for_status()
             payload_results = response.json()
-            if isinstance(payload_results, list) and payload_results:
-                results = payload_results
-                break
+            if not isinstance(payload_results, list):
+                continue
+            for result in payload_results:
+                if not isinstance(result, dict):
+                    continue
+                identity = (
+                    str(result.get("place_id") or ""),
+                    str(result.get("lat") or ""),
+                    str(result.get("lon") or ""),
+                )
+                if identity in seen:
+                    continue
+                seen.add(identity)
+                results.append(result)
     except requests.Timeout as exc:
-        raise HTTPException(
-            status_code=504,
-            detail="The address provider timed out. Please try again.",
-        ) from exc
+        raise HTTPException(status_code=504, detail="The address provider timed out. Please try again.") from exc
     except requests.HTTPError as exc:
         status = exc.response.status_code if exc.response is not None else provider_status
         raise HTTPException(
@@ -837,19 +969,26 @@ def fetch_geocode(query: str, city_key: str) -> dict[str, Any]:
             detail=f"The address provider rejected the request{f' (HTTP {status})' if status else ''}. Try again later.",
         ) from exc
     except requests.ConnectionError as exc:
-        raise HTTPException(
-            status_code=503,
-            detail="The server could not reach the address provider. Please try again shortly.",
-        ) from exc
+        raise HTTPException(status_code=503, detail="The server could not reach the address provider. Please try again shortly.") from exc
     except requests.RequestException as exc:
-        raise HTTPException(
-            status_code=503,
-            detail="Address lookup is temporarily unavailable. Please try again shortly.",
-        ) from exc
+        raise HTTPException(status_code=503, detail="Address lookup is temporarily unavailable. Please try again shortly.") from exc
     except ValueError as exc:
         raise HTTPException(status_code=502, detail="The address provider returned an invalid response.") from exc
 
-    if not isinstance(results, list) or not results:
+    postcode_mismatch = False
+    eligible = results
+    if requested_postcode:
+        eligible = [result for result in results if result_postcode_digits(result) == requested_postcode]
+        postcode_mismatch = bool(results and not eligible)
+
+    if not eligible:
+        message = (
+            f"No Swedish location with postal code {requested_postcode[:3]} {requested_postcode[3:]} matched the search."
+            if requested_postcode
+            else "No Swedish address or postal code matched the search."
+        )
+        if postcode_mismatch:
+            message += " Unrelated results with different postal codes were rejected."
         payload = {
             "found": False,
             "insideSelectedCity": False,
@@ -857,12 +996,13 @@ def fetch_geocode(query: str, city_key: str) -> dict[str, Any]:
             "selectedCityKey": city_key,
             "matchedCityKey": None,
             "query": clean_query,
-            "message": "No Swedish address or postal code matched the search.",
+            "requestedPostalCode": requested_postcode,
+            "message": message,
             "provider": "OpenStreetMap Nominatim",
         }
     else:
-        inside = [result for result in results if result_matches_city(result, city_key)]
-        chosen = inside[0] if inside else results[0]
+        eligible.sort(key=lambda result: _geocode_result_rank(result, city_key, requested_postcode), reverse=True)
+        chosen = eligible[0]
         address = chosen.get("address") or {}
         try:
             lat = float(chosen["lat"])
@@ -889,6 +1029,7 @@ def fetch_geocode(query: str, city_key: str) -> dict[str, Any]:
             "matchedCityKey": matched_city_key,
             "matchedCity": CITY_CONFIG.get(matched_city_key, {}).get("label") if matched_city_key else None,
             "query": clean_query,
+            "requestedPostalCode": requested_postcode,
             "displayName": chosen.get("display_name") or clean_query,
             "lat": lat,
             "lng": lng,
@@ -914,9 +1055,10 @@ def fetch_geocode(query: str, city_key: str) -> dict[str, Any]:
     payload["cached"] = False
     return payload
 
-
 def get_available_years(conn: sqlite3.Connection) -> list[int]:
-    rows = conn.execute("SELECT DISTINCT year FROM school_year_metrics ORDER BY year DESC").fetchall()
+    rows = conn.execute(
+        f"SELECT DISTINCT year FROM school_year_metrics WHERE ({SUBSTANTIVE_SQL}) ORDER BY year DESC"
+    ).fetchall()
     return [int(row["year"]) for row in rows]
 
 
@@ -991,6 +1133,13 @@ def nearby_api(
     origin_lat = float(geocode["lat"])
     origin_lng = float(geocode["lng"])
     with db() as conn:
+        tracked_count = int(conn.execute(
+            "SELECT COUNT(*) AS n FROM schools WHERE city_key=?", (matched_city,)
+        ).fetchone()["n"])
+        coordinate_count = int(conn.execute(
+            "SELECT COUNT(*) AS n FROM schools WHERE city_key=? AND lat IS NOT NULL AND lng IS NOT NULL",
+            (matched_city,),
+        ).fetchone()["n"])
         rows = conn.execute(
             "SELECT * FROM schools WHERE city_key=? AND lat IS NOT NULL AND lng IS NOT NULL",
             (matched_city,),
@@ -1010,6 +1159,19 @@ def nearby_api(
             candidates.append(item)
     candidates.sort(key=lambda item: (item["distanceKm"], -(item.get("qualityScore") or 0)))
     selected = candidates[:limit]
+    registry_sync = get_state("registry_sync")
+    if selected:
+        message = f"Showing tracked schools in the {CITY_CONFIG[matched_city]['label']} dataset."
+    elif coordinate_count == 0:
+        message = (
+            f"{tracked_count} tracked schools are loaded for {CITY_CONFIG[matched_city]['label']}, "
+            "but none currently have coordinates. The official registry coordinate refresh has not succeeded yet."
+        )
+    else:
+        message = (
+            f"No tracked school with coordinates was found within {radius_km:g} km. "
+            f"Coordinate coverage: {coordinate_count} of {tracked_count} loaded schools."
+        )
     return {
         "geocode": geocode,
         "selectedCityKey": selected_city,
@@ -1017,13 +1179,12 @@ def nearby_api(
         "matchedCityLabel": CITY_CONFIG[matched_city]["label"],
         "autoSwitched": matched_city != selected_city,
         "radiusKm": radius_km,
+        "trackedSchoolCount": tracked_count,
+        "coordinateSchoolCount": coordinate_count,
+        "registrySync": registry_sync,
         "count": len(selected),
         "schools": selected,
-        "message": (
-            f"Showing tracked schools in the {CITY_CONFIG[matched_city]['label']} dataset."
-            if selected
-            else f"No tracked schools with coordinates were found within {radius_km:g} km. The registry sync may still be running."
-        ),
+        "message": message,
     }
 
 
@@ -1068,7 +1229,8 @@ def metadata() -> dict[str, Any]:
             for key, config in CITY_CONFIG.items()
         ],
         "registrySync": get_state("registry_sync"),
-        "baselineMode": "Bundled baseline records make all four city directories available immediately; live registry sync refreshes and enriches them when available.",
+        "surveySync": get_state("survey_sync"),
+        "baselineMode": "Bundled baseline records make all four city directories available immediately. Registry sync adds official IDs and coordinates; the separate 2026+2025 survey sync adds published Skolenkäten values.",
     }
 
 
@@ -1081,7 +1243,7 @@ def schools_api(
     if city_key not in CITY_CONFIG and city_key != "all":
         raise HTTPException(status_code=400, detail="Unsupported city dataset")
 
-    sync_triggered = False
+    registry_triggered = False
     with db() as conn:
         if city_key == "all":
             school_rows = conn.execute("SELECT * FROM schools ORDER BY name COLLATE NOCASE").fetchall()
@@ -1091,7 +1253,7 @@ def schools_api(
             ).fetchall()
 
     if city_key != "all" and not school_rows:
-        sync_triggered = start_background_sync_if_needed(force=True)
+        registry_triggered = start_background_sync_if_needed(force=True)
 
     with db() as conn:
         if city_key == "all":
@@ -1100,9 +1262,10 @@ def schools_api(
             school_rows = conn.execute(
                 "SELECT * FROM schools WHERE city_key=? ORDER BY name COLLATE NOCASE", (city_key,)
             ).fetchall()
-        items = []
+        items: list[dict[str, Any]] = []
         fallback_count = 0
         rated_count = 0
+        quality_metric_count = 0
         registry_only_count = 0
         requested_year, _year_mode = resolve_year_param(conn, year)
         for school in school_rows:
@@ -1111,7 +1274,10 @@ def schools_api(
                 if fallback:
                     fallback_count += 1
                 rated_count += 1
-                items.append(combine_school_and_metric(school, metric, fallback, requested_metric_year))
+                item = combine_school_and_metric(school, metric, fallback, requested_metric_year)
+                if int(item.get("dataCompletenessPct") or 0) > 0:
+                    quality_metric_count += 1
+                items.append(item)
             else:
                 registry_only_count += 1
                 items.append(combine_school_without_metric(school, requested_year))
@@ -1122,6 +1288,11 @@ def schools_api(
             "SELECT city_key, COUNT(*) AS n FROM schools GROUP BY city_key"
         ).fetchall()
     city_counts = {row["city_key"]: int(row["n"]) for row in city_counts_rows if row["city_key"]}
+
+    survey_triggered = False
+    if items and quality_metric_count == 0:
+        survey_triggered = start_background_survey_if_needed(force=True)
+
     return {
         "requestedYear": year,
         "city": city_key,
@@ -1132,10 +1303,13 @@ def schools_api(
         "availableYears": available_years,
         "fallbackCount": fallback_count,
         "ratedCount": rated_count,
+        "qualityMetricCount": quality_metric_count,
         "registryOnlyCount": registry_only_count,
         "cityCounts": city_counts,
-        "syncTriggered": sync_triggered,
+        "syncTriggered": registry_triggered,
+        "surveySyncTriggered": survey_triggered,
         "registrySync": get_state("registry_sync"),
+        "surveySync": get_state("survey_sync"),
         "count": len(items),
         "schools": items,
     }
@@ -1195,13 +1369,10 @@ def import_skolenkaten_api(request: Request, year: int = Query(default=2026), ap
             raise HTTPException(status_code=401, detail="Invalid admin token")
     try:
         cache_dir = DATA_DIR / "source_cache" / "skolenkaten"
-        baseline_path = DATA_DIR / f"schools-{year}.json"
-        if not baseline_path.exists():
-            baseline_path = BASELINE_FILE
-        baseline = load_baseline(baseline_path)
+        baseline = database_baseline(year)
         source_files = ensure_source_files(year, cache_dir, use_network=True)
         records, import_metadata = build_skolenkaten_import(baseline, source_files, year=year)
-        output_path = DATA_DIR / "imports" / f"schools-{year}-skolenkaten.json"
+        output_path = DATA_DIR / "imports" / f"schools-{year}-skolenkaten-four-cities.json"
         write_import_json(records, output_path, import_metadata)
         imported = upsert_schools(records, output_path.name) if apply else 0
     except Exception as exc:

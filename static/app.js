@@ -1,5 +1,6 @@
 let schools = [];
 let metadata = null;
+let currentCityPayload = null;
 const YEAR_MODE = "current";
 const CITY_LABELS = {
   goteborg: "Göteborg",
@@ -282,11 +283,22 @@ function renderDirectory() {
   const cityKey = $("citySelect")?.value || "goteborg";
   const cityLabel = CITY_LABELS[cityKey] || "Selected city";
   $("directoryTitle").textContent = `${cityLabel} school directory`;
-  const rated = schools.filter(s => s.dataYear).length;
+  const qualityCount = schools.filter(s => Number(s.dataCompletenessPct || 0) > 0).length;
   $("directoryMeta").textContent = schools.length
-    ? `${schools.length} schools loaded · ${rated} with rating-year data`
+    ? `${schools.length} schools loaded · ${qualityCount} with published survey/academic metrics`
     : `No schools loaded yet for ${cityLabel}`;
-  $("schoolGrid").innerHTML = list.map(schoolCard).join("") || `<p class="empty">No schools match the current filters.</p>`;
+
+  const surveySync = currentCityPayload?.surveySync || metadata?.surveySync || {};
+  let surveyNotice = "";
+  if (schools.length && qualityCount === 0 && surveySync.status === "running") {
+    surveyNotice = `<div class="notice"><strong>Adding national survey data:</strong> the app is matching the official 2026 and 2025 Skolenkäten files to ${escapeHtml(cityLabel)} schools. Cards refresh automatically.</div>`;
+  } else if (schools.length && qualityCount === 0 && surveySync.status === "failed") {
+    surveyNotice = `<div class="notice"><strong>Survey enrichment failed:</strong> ${escapeHtml(surveySync.error || "the official survey files could not be downloaded or matched")}. The school directory remains available, but quality scores stay n/a until a successful refresh.</div>`;
+  } else if (schools.length && qualityCount === 0 && ["complete", "partial"].includes(surveySync.status)) {
+    surveyNotice = `<div class="notice"><strong>No matched quality metrics yet:</strong> the directory records are loaded, but none of these schools matched a published 2025/2026 survey or academic record. Missing or privacy-suppressed values remain n/a.</div>`;
+  }
+  const cards = list.map(schoolCard).join("") || `<p class="empty">No schools match the current filters.</p>`;
+  $("schoolGrid").innerHTML = `${surveyNotice}${cards}`;
 }
 
 async function renderNearby() {
@@ -325,8 +337,9 @@ async function renderNearby() {
     if (!nearby.length) {
       $("nearbyResults").innerHTML = `
         <div class="notice">
-          <strong>No tracked schools returned:</strong> ${escapeHtml(payload.message || "The address is outside the loaded regions or the school-registry sync is still running.")}
+          <strong>No nearby schools returned:</strong> ${escapeHtml(payload.message || "The address is outside the loaded regions or school coordinates are unavailable.")}
           <br><span>Matched address: ${escapeHtml(result.displayName || input)}</span>
+          ${payload.trackedSchoolCount !== undefined ? `<br><span>Coordinate coverage: ${escapeHtml(payload.coordinateSchoolCount || 0)} of ${escapeHtml(payload.trackedSchoolCount || 0)} loaded schools.</span>` : ""}
         </div>`;
       return;
     }
@@ -473,8 +486,12 @@ function updateCompareDefaults() {
 
 function scheduleCityReload(cityKey, payload) {
   if (cityReloadTimer) clearTimeout(cityReloadTimer);
-  const status = payload?.registrySync?.status;
-  if (schools.length || status === "failed" || cityReloadAttempts >= 20) {
+  const registryStatus = payload?.registrySync?.status;
+  const surveyStatus = payload?.surveySync?.status;
+  const needsRegistry = !schools.length && (registryStatus === "running" || payload?.syncTriggered);
+  const needsSurvey = schools.length > 0 && Number(payload?.qualityMetricCount || 0) === 0 &&
+    (surveyStatus === "running" || payload?.surveySyncTriggered);
+  if ((!needsRegistry && !needsSurvey) || cityReloadAttempts >= 40) {
     cityReloadAttempts = 0;
     return;
   }
@@ -502,6 +519,7 @@ async function loadSchoolsForCity(cityKey, isPoll = false) {
   );
   if (!schoolsResponse.ok) throw new Error("Could not load school data");
   const payload = await schoolsResponse.json();
+  currentCityPayload = payload;
   schools = payload.schools || [];
   updateDataMode(payload);
   $("schoolNames").innerHTML = schools.map(s => `<option value="${escapeHtml(s.name)}"></option>`).join("");
@@ -526,7 +544,7 @@ async function loadSchoolsForCity(cityKey, isPoll = false) {
     }
     scheduleCityReload(cityKey, payload);
   } else {
-    cityReloadAttempts = 0;
+    scheduleCityReload(cityKey, payload);
   }
   return payload;
 }
