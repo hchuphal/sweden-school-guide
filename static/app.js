@@ -50,7 +50,12 @@ async function geocodeAddress(input, cityKey) {
   if (!query) throw new Error("Enter an address or postal code.");
   const response = await fetch(`/api/geocode?q=${encodeURIComponent(query)}&city=${encodeURIComponent(cityKey)}`);
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.detail || "Address lookup failed.");
+  if (!response.ok) {
+    const detail = Array.isArray(payload.detail)
+      ? payload.detail.map(item => item.msg || String(item)).join("; ")
+      : payload.detail;
+    throw new Error(detail || `Address lookup failed (HTTP ${response.status}).`);
+  }
   return payload;
 }
 

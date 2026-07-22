@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
+import requests
+
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -27,17 +29,17 @@ DB_PATH = Path(os.getenv("SCHOOLGUIDE_DB_PATH", DATA_DIR / "schoolguide.sqlite")
 DEFAULT_YEAR_MODE = os.getenv("DEFAULT_YEAR_MODE", "current").strip().lower()
 BASELINE_FILE = DATA_DIR / "schools-2026.json"
 GEOCODER_URL = os.getenv("GEOCODER_URL", "https://nominatim.openstreetmap.org/search")
-GEOCODER_USER_AGENT = os.getenv("GEOCODER_USER_AGENT", "SwedenSchoolGuide/0.12")
+GEOCODER_USER_AGENT = os.getenv("GEOCODER_USER_AGENT", "SwedenSchoolGuide/0.13")
 GEOCODER_EMAIL = os.getenv("GEOCODER_EMAIL", "").strip()
 CITY_CONFIG = {
     "goteborg": {
         "label": "Göteborg",
-        "aliases": {"goteborg", "göteborg", "gothenburg", "goteborgs kommun", "göteborgs kommun"},
+        "aliases": {"goteborg", "göteborg", "gothenburg", "goteborgs kommun", "göteborgs kommun", "goteborgs stad", "göteborgs stad"},
     }
 }
-APP_VERSION = "0.12.0"
+APP_VERSION = "0.13.0"
 
-QUALITY_METHOD_VERSION = "v0.12 survey, academic and admission UI with live address geocoding"
+QUALITY_METHOD_VERSION = "v0.13 survey, academic and admission UI with repaired live address geocoding"
 MISSING_VALUE_BASELINE = 6.5
 
 QUALITY_COMPONENTS = [
@@ -482,34 +484,67 @@ def fetch_geocode(query: str, city_key: str) -> dict[str, Any]:
             payload["cached"] = True
             return payload
 
-    search_query = clean_query
-    if "sweden" not in normalize_location_text(search_query) and "sverige" not in normalize_location_text(search_query):
-        search_query = f"{search_query}, Sweden"
-    params: dict[str, Any] = {
-        "q": search_query,
-        "format": "jsonv2",
-        "addressdetails": 1,
-        "limit": 5,
-        "countrycodes": "se",
-        "accept-language": "sv,en",
-    }
-    if GEOCODER_EMAIL:
-        params["email"] = GEOCODER_EMAIL
+    normalized_query = normalize_location_text(clean_query)
+    city_label = CITY_CONFIG[city_key]["label"]
+    has_country = "sweden" in normalized_query or "sverige" in normalized_query
+    has_city = any(alias in normalized_query for alias in {normalize_location_text(v) for v in CITY_CONFIG[city_key]["aliases"]})
+
+    search_candidates: list[str] = []
+    base_query = clean_query if has_country else f"{clean_query}, Sweden"
+    search_candidates.append(base_query)
+    if not has_city:
+        city_query = f"{clean_query}, {city_label}, Sweden"
+        if city_query not in search_candidates:
+            search_candidates.append(city_query)
+
     headers = {
         "User-Agent": GEOCODER_USER_AGENT,
         "Accept": "application/json",
     }
+    results: list[dict[str, Any]] = []
+    provider_status: int | None = None
     try:
-        response = requests.get(GEOCODER_URL, params=params, headers=headers, timeout=12)
-        response.raise_for_status()
-        results = response.json()
+        for search_query in search_candidates:
+            params: dict[str, Any] = {
+                "q": search_query,
+                "format": "jsonv2",
+                "addressdetails": 1,
+                "limit": 5,
+                "countrycodes": "se",
+                "accept-language": "sv,en",
+            }
+            if GEOCODER_EMAIL:
+                params["email"] = GEOCODER_EMAIL
+            response = requests.get(GEOCODER_URL, params=params, headers=headers, timeout=15)
+            provider_status = response.status_code
+            response.raise_for_status()
+            payload_results = response.json()
+            if isinstance(payload_results, list) and payload_results:
+                results = payload_results
+                break
+    except requests.Timeout as exc:
+        raise HTTPException(
+            status_code=504,
+            detail="The address provider timed out. Please try again.",
+        ) from exc
+    except requests.HTTPError as exc:
+        status = exc.response.status_code if exc.response is not None else provider_status
+        raise HTTPException(
+            status_code=502,
+            detail=f"The address provider rejected the request{f' (HTTP {status})' if status else ''}. Try again later.",
+        ) from exc
+    except requests.ConnectionError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="The server could not reach the address provider. Please try again shortly.",
+        ) from exc
     except requests.RequestException as exc:
         raise HTTPException(
             status_code=503,
-            detail="Address lookup is temporarily unavailable. Try again shortly.",
+            detail="Address lookup is temporarily unavailable. Please try again shortly.",
         ) from exc
     except ValueError as exc:
-        raise HTTPException(status_code=502, detail="Address provider returned an invalid response") from exc
+        raise HTTPException(status_code=502, detail="The address provider returned an invalid response.") from exc
 
     if not isinstance(results, list) or not results:
         payload = {
