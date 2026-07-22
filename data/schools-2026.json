@@ -33,7 +33,10 @@
     "lastVerified": "July 2026",
     "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "jattestensskolan",
-    "academicScore": 7.4
+    "academicScore": 7.4,
+    "cityKey": "goteborg",
+    "municipality": "Göteborg",
+    "registrySource": "seeded"
   },
   {
     "name": "Herrgårdsskolan",
@@ -69,7 +72,10 @@
     "lastVerified": "July 2026",
     "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "herrgardsskolan",
-    "academicScore": 8.2
+    "academicScore": 8.2,
+    "cityKey": "goteborg",
+    "municipality": "Göteborg",
+    "registrySource": "seeded"
   },
   {
     "name": "Taubeskolan",
@@ -105,7 +111,10 @@
     "lastVerified": "July 2026",
     "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "taubeskolan",
-    "academicScore": 6.8
+    "academicScore": 6.8,
+    "cityKey": "goteborg",
+    "municipality": "Göteborg",
+    "registrySource": "seeded"
   },
   {
     "name": "Lerlyckeskolan",
@@ -141,7 +150,10 @@
     "lastVerified": "July 2026",
     "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "lerlyckeskolan",
-    "academicScore": 7.4
+    "academicScore": 7.4,
+    "cityKey": "goteborg",
+    "municipality": "Göteborg",
+    "registrySource": "seeded"
   },
   {
     "name": "Bjurslättsskolan",
@@ -177,7 +189,10 @@
     "lastVerified": "July 2026",
     "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "bjurslattsskolan",
-    "academicScore": 5.8
+    "academicScore": 5.8,
+    "cityKey": "goteborg",
+    "municipality": "Göteborg",
+    "registrySource": "seeded"
   },
   {
     "name": "Bräckeskolan",
@@ -213,7 +228,10 @@
     "lastVerified": "July 2026",
     "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "brackeskolan",
-    "academicScore": 6.2
+    "academicScore": 6.2,
+    "cityKey": "goteborg",
+    "municipality": "Göteborg",
+    "registrySource": "seeded"
   },
   {
     "name": "Innovitaskolan St Jörgen",
@@ -253,7 +271,10 @@
     "lastVerified": "July 2026",
     "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "innovitaskolan-st-jorgen",
-    "academicScore": 6.4
+    "academicScore": 6.4,
+    "cityKey": "goteborg",
+    "municipality": "Göteborg",
+    "registrySource": "seeded"
   },
   {
     "name": "Fridaskolan Kvillebäcken",
@@ -289,7 +310,10 @@
     "lastVerified": "July 2026",
     "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "fridaskolan-kvillebacken",
-    "academicScore": 6.8
+    "academicScore": 6.8,
+    "cityKey": "goteborg",
+    "municipality": "Göteborg",
+    "registrySource": "seeded"
   },
   {
     "name": "Ebba Petterssons Privatskola",
@@ -325,7 +349,10 @@
     "lastVerified": "July 2026",
     "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "ebba-petterssons-privatskola",
-    "academicScore": 8.2
+    "academicScore": 8.2,
+    "cityKey": "goteborg",
+    "municipality": "Göteborg",
+    "registrySource": "seeded"
   },
   {
     "name": "IES Södra Änggården",
@@ -361,7 +388,10 @@
     "lastVerified": "July 2026",
     "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "ies-sodra-anggarden",
-    "academicScore": 6.5
+    "academicScore": 6.5,
+    "cityKey": "goteborg",
+    "municipality": "Göteborg",
+    "registrySource": "seeded"
   },
   {
     "name": "Göteborgs Högre Samskola / Lilla Samskolan",
@@ -397,7 +427,10 @@
     "lastVerified": "July 2026",
     "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "goteborgs-hogre-samskola-lilla-samskolan",
-    "academicScore": 8.8
+    "academicScore": 8.8,
+    "cityKey": "goteborg",
+    "municipality": "Göteborg",
+    "registrySource": "seeded"
   },
   {
     "name": "ISGR",
@@ -433,7 +466,10 @@
     "lastVerified": "July 2026",
     "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "isgr",
-    "academicScore": 9.0
+    "academicScore": 9.0,
+    "cityKey": "goteborg",
+    "municipality": "Göteborg",
+    "registrySource": "seeded"
   },
   {
     "name": "Vittra Kronhusparken",
@@ -469,7 +505,10 @@
     "lastVerified": "July 2026",
     "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "vittra-kronhusparken",
-    "academicScore": 6.3
+    "academicScore": 6.3,
+    "cityKey": "goteborg",
+    "municipality": "Göteborg",
+    "registrySource": "seeded"
   },
   {
     "name": "Montessoriskolan Casa",
@@ -505,7 +544,10 @@
     "lastVerified": "July 2026",
     "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "montessoriskolan-casa",
-    "academicScore": 7.4
+    "academicScore": 7.4,
+    "cityKey": "goteborg",
+    "municipality": "Göteborg",
+    "registrySource": "seeded"
   },
   {
     "name": "Montessoriskolan Centrum",
@@ -541,6 +583,50 @@
     "lastVerified": "July 2026",
     "verificationNote": "Demo data seeded from public sources. v0.8 calculates quality score from raw metrics; verify before application decisions.",
     "slug": "montessoriskolan-centrum",
-    "academicScore": 7.6
+    "academicScore": 7.6,
+    "cityKey": "goteborg",
+    "municipality": "Göteborg",
+    "registrySource": "seeded"
+  },
+  {
+    "name": "Eklandaskolan",
+    "type": "Municipal",
+    "grades": "F–6",
+    "area": "Eklanda",
+    "address": "Eklanda allé 15, 431 59 Mölndal",
+    "lat": 57.6547,
+    "lng": 11.9642,
+    "profile": "Municipal F–6",
+    "qualityScore": 84,
+    "admissionScore": null,
+    "admissionNote": "Mölndal municipal placement rules apply. Admission depends on placement criteria and capacity; no app admission score is currently calculated.",
+    "f0Satisfaction": 8.4,
+    "safety": 8.9,
+    "studyPeace": 7.7,
+    "support": 8.8,
+    "studentSatisfaction": null,
+    "parentSatisfaction": null,
+    "academicSignal": "Grade 6 national-test indicators were above national comparison values in the prior official-data check.",
+    "academicScore": 8.0,
+    "decisionNote": "Mölndal F–6 option in Eklanda. Verify current placement rules and capacity with Mölndals stad.",
+    "sources": [
+      {
+        "label": "Skolverket / Utbildningsguiden",
+        "url": "https://utbildningsguiden.skolverket.se/skolenhet?schoolUnitID=38620615"
+      },
+      {
+        "label": "Mölndals stad",
+        "url": "https://www.molndal.se/forskola-skola-och-utbildning/grundskola/alla-grundskolor/eklandaskolan"
+      }
+    ],
+    "dataYear": 2026,
+    "lastVerified": "July 2026",
+    "verificationNote": "Seeded from official public sources; the school registry sync may replace school facts with current official values.",
+    "slug": "eklandaskolan",
+    "schoolUnitId": 38620615,
+    "cityKey": "goteborg",
+    "municipality": "Mölndal",
+    "postalCode": "431 59",
+    "registrySource": "seeded"
   }
 ]

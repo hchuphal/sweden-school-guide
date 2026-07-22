@@ -4,6 +4,7 @@ import json
 import os
 import sqlite3
 import re
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -13,6 +14,8 @@ import requests
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+
+from app.school_registry_importer import build_records as build_registry_records, fetch_school_units
 
 from app.skolenkaten_importer import (
     build_skolenkaten_import,
@@ -29,17 +32,46 @@ DB_PATH = Path(os.getenv("SCHOOLGUIDE_DB_PATH", DATA_DIR / "schoolguide.sqlite")
 DEFAULT_YEAR_MODE = os.getenv("DEFAULT_YEAR_MODE", "current").strip().lower()
 BASELINE_FILE = DATA_DIR / "schools-2026.json"
 GEOCODER_URL = os.getenv("GEOCODER_URL", "https://nominatim.openstreetmap.org/search")
-GEOCODER_USER_AGENT = os.getenv("GEOCODER_USER_AGENT", "SwedenSchoolGuide/0.13")
+GEOCODER_USER_AGENT = os.getenv("GEOCODER_USER_AGENT", "SwedenSchoolGuide/0.14")
 GEOCODER_EMAIL = os.getenv("GEOCODER_EMAIL", "").strip()
+SCHOOL_REGISTRY_URL = os.getenv(
+    "SCHOOL_REGISTRY_URL",
+    "https://api.skolverket.se/skolenhetsregistret/v2/school-units",
+)
+AUTO_IMPORT_SCHOOL_REGISTRY = os.getenv("AUTO_IMPORT_SCHOOL_REGISTRY", "true").strip().lower() in {"1", "true", "yes", "on"}
+AUTO_IMPORT_SKOLENKATEN = os.getenv("AUTO_IMPORT_SKOLENKATEN", "true").strip().lower() in {"1", "true", "yes", "on"}
 CITY_CONFIG = {
     "goteborg": {
         "label": "Göteborg",
-        "aliases": {"goteborg", "göteborg", "gothenburg", "goteborgs kommun", "göteborgs kommun", "goteborgs stad", "göteborgs stad"},
-    }
+        "municipality_codes": {"1480", "1481"},
+        "municipality_aliases": {
+            "goteborg", "göteborg", "gothenburg", "goteborgs kommun", "göteborgs kommun",
+            "goteborgs stad", "göteborgs stad", "molndal", "mölndal", "molndals kommun", "mölndals kommun",
+        },
+        "search_aliases": {"goteborg", "göteborg", "gothenburg", "molndal", "mölndal"},
+    },
+    "stockholm": {
+        "label": "Stockholm",
+        "municipality_codes": {"0180"},
+        "municipality_aliases": {"stockholm", "stockholms kommun", "stockholms stad"},
+        "search_aliases": {"stockholm"},
+    },
+    "malmo": {
+        "label": "Malmö",
+        "municipality_codes": {"1280"},
+        "municipality_aliases": {"malmo", "malmö", "malmo kommun", "malmö kommun", "malmo stad", "malmö stad"},
+        "search_aliases": {"malmo", "malmö"},
+    },
+    "uppsala": {
+        "label": "Uppsala",
+        "municipality_codes": {"0380"},
+        "municipality_aliases": {"uppsala", "uppsala kommun"},
+        "search_aliases": {"uppsala"},
+    },
 }
-APP_VERSION = "0.13.0"
+APP_VERSION = "0.14.0"
 
-QUALITY_METHOD_VERSION = "v0.13 survey, academic and admission UI with repaired live address geocoding"
+QUALITY_METHOD_VERSION = "v0.14 four-city registry, national surveys and location-aware nearby search"
 MISSING_VALUE_BASELINE = 6.5
 
 QUALITY_COMPONENTS = [
@@ -91,7 +123,8 @@ TOTAL_COMPONENT_WEIGHT = sum(item["weight"] for item in QUALITY_COMPONENTS)
 TOTAL_QUALITY_WEIGHT = TOTAL_COMPONENT_WEIGHT + DATA_CONFIDENCE_WEIGHT
 
 SCHOOL_FIELDS = [
-    "slug", "name", "type", "grades", "area", "address", "lat", "lng", "profile", "sources"
+    "slug", "name", "type", "grades", "area", "address", "lat", "lng", "profile", "sources",
+    "cityKey", "municipality", "postalCode", "registrySource"
 ]
 
 METRIC_FIELDS = [
@@ -126,6 +159,10 @@ def init_db() -> None:
                 lat REAL,
                 lng REAL,
                 profile TEXT,
+                city_key TEXT,
+                municipality TEXT,
+                postal_code TEXT,
+                registry_source TEXT,
                 school_unit_id INTEGER,
                 sources_json TEXT DEFAULT '[]',
                 updated_at TEXT NOT NULL
@@ -178,10 +215,27 @@ def init_db() -> None:
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS system_state (
+                key TEXT PRIMARY KEY,
+                value_json TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
         # Lightweight migration for databases created by previous MVP versions.
         school_columns = {row["name"] for row in conn.execute("PRAGMA table_info(schools)").fetchall()}
         if "school_unit_id" not in school_columns:
             conn.execute("ALTER TABLE schools ADD COLUMN school_unit_id INTEGER")
+        for column_name, column_type in (
+            ("city_key", "TEXT"),
+            ("municipality", "TEXT"),
+            ("postal_code", "TEXT"),
+            ("registry_source", "TEXT"),
+        ):
+            if column_name not in school_columns:
+                conn.execute(f"ALTER TABLE schools ADD COLUMN {column_name} {column_type}")
         columns = {row["name"] for row in conn.execute("PRAGMA table_info(school_year_metrics)").fetchall()}
         if "academicScore" not in columns:
             conn.execute("ALTER TABLE school_year_metrics ADD COLUMN academicScore REAL")
@@ -210,8 +264,8 @@ def upsert_schools(records: Iterable[dict[str, Any]], source_label: str) -> int:
             sources_json = json.dumps(item.get("sources", []), ensure_ascii=False)
             conn.execute(
                 """
-                INSERT INTO schools (slug, name, type, grades, area, address, lat, lng, profile, school_unit_id, sources_json, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO schools (slug, name, type, grades, area, address, lat, lng, profile, city_key, municipality, postal_code, registry_source, school_unit_id, sources_json, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(slug) DO UPDATE SET
                     name=excluded.name,
                     type=excluded.type,
@@ -221,6 +275,10 @@ def upsert_schools(records: Iterable[dict[str, Any]], source_label: str) -> int:
                     lat=excluded.lat,
                     lng=excluded.lng,
                     profile=excluded.profile,
+                    city_key=excluded.city_key,
+                    municipality=excluded.municipality,
+                    postal_code=excluded.postal_code,
+                    registry_source=excluded.registry_source,
                     school_unit_id=excluded.school_unit_id,
                     sources_json=excluded.sources_json,
                     updated_at=excluded.updated_at
@@ -235,6 +293,10 @@ def upsert_schools(records: Iterable[dict[str, Any]], source_label: str) -> int:
                     item.get("lat"),
                     item.get("lng"),
                     item.get("profile"),
+                    item.get("cityKey") or "goteborg",
+                    item.get("municipality") or ("Göteborg" if (item.get("cityKey") or "goteborg") == "goteborg" else None),
+                    item.get("postalCode"),
+                    item.get("registrySource") or "seeded",
                     item.get("schoolUnitId"),
                     sources_json,
                     imported_at,
@@ -320,6 +382,26 @@ def calculate_quality(metric: sqlite3.Row | dict[str, Any]) -> dict[str, Any]:
             }
         )
 
+    if available_weight == 0:
+        return {
+            "qualityScore": None,
+            "qualityScoreExact": None,
+            "qualityMethodVersion": QUALITY_METHOD_VERSION,
+            "dataCompletenessPct": 0,
+            "dataConfidenceLabel": "Low",
+            "missingQualityFields": missing_keys,
+            "qualityBreakdown": components,
+            "qualityFormula": {
+                "weights": [
+                    {"key": item["key"], "label": item["label"], "weight": item["weight"]}
+                    for item in QUALITY_COMPONENTS
+                ],
+                "dataConfidenceWeight": DATA_CONFIDENCE_WEIGHT,
+                "missingValueBaseline": MISSING_VALUE_BASELINE,
+                "note": "No quality score is shown until at least one quality metric is available. Admission realism is separate.",
+            },
+        }
+
     completeness = available_weight / TOTAL_COMPONENT_WEIGHT if TOTAL_COMPONENT_WEIGHT else 0
     confidence_component = completeness * DATA_CONFIDENCE_WEIGHT
     final_score = weighted_points + confidence_component
@@ -404,6 +486,9 @@ def metric_row_for(conn: sqlite3.Connection, slug: str, year_param: str | None) 
 def combine_school_and_metric(school: sqlite3.Row, metric: sqlite3.Row, is_fallback: bool, requested_year: int | None) -> dict[str, Any]:
     result = dict(school)
     result["sources"] = json.loads(result.pop("sources_json") or "[]")
+    result["cityKey"] = result.get("city_key")
+    result["postalCode"] = result.get("postal_code")
+    result["registrySource"] = result.get("registry_source")
     for field in METRIC_FIELDS:
         result[field] = metric[field]
     result["dataYear"] = metric["year"]
@@ -421,6 +506,163 @@ def combine_school_and_metric(school: sqlite3.Row, metric: sqlite3.Row, is_fallb
     return result
 
 
+
+
+def set_state(key: str, value: dict[str, Any]) -> None:
+    with db() as conn:
+        conn.execute(
+            """
+            INSERT INTO system_state (key, value_json, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json, updated_at=excluded.updated_at
+            """,
+            (key, json.dumps(value, ensure_ascii=False), now_iso()),
+        )
+        conn.commit()
+
+
+def get_state(key: str) -> dict[str, Any] | None:
+    with db() as conn:
+        row = conn.execute("SELECT value_json, updated_at FROM system_state WHERE key=?", (key,)).fetchone()
+    if not row:
+        return None
+    payload = json.loads(row["value_json"])
+    payload["updatedAt"] = row["updated_at"]
+    return payload
+
+
+def existing_slug_for_registry(conn: sqlite3.Connection, item: dict[str, Any]) -> str:
+    school_unit_id = item.get("schoolUnitId")
+    if school_unit_id is not None:
+        row = conn.execute("SELECT slug FROM schools WHERE school_unit_id=? LIMIT 1", (school_unit_id,)).fetchone()
+        if row:
+            return str(row["slug"])
+    name_key = normalize_location_text(item.get("name"))
+    city_key = item.get("cityKey")
+    for row in conn.execute("SELECT slug, name FROM schools WHERE city_key=?", (city_key,)).fetchall():
+        if normalize_location_text(row["name"]) == name_key:
+            return str(row["slug"])
+    return str(item["slug"])
+
+
+def upsert_registry_schools(records: Iterable[dict[str, Any]], source_label: str, year: int) -> int:
+    imported_at = now_iso()
+    count = 0
+    with db() as conn:
+        for raw in records:
+            item = dict(raw)
+            item["slug"] = existing_slug_for_registry(conn, item)
+            sources_json = json.dumps(item.get("sources", []), ensure_ascii=False)
+            conn.execute(
+                """
+                INSERT INTO schools (slug, name, type, grades, area, address, lat, lng, profile, city_key, municipality, postal_code, registry_source, school_unit_id, sources_json, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(slug) DO UPDATE SET
+                    name=excluded.name, type=excluded.type, grades=excluded.grades, area=excluded.area,
+                    address=excluded.address, lat=COALESCE(excluded.lat, schools.lat), lng=COALESCE(excluded.lng, schools.lng),
+                    profile=CASE WHEN schools.registry_source='seeded' THEN schools.profile ELSE excluded.profile END,
+                    city_key=excluded.city_key, municipality=excluded.municipality, postal_code=excluded.postal_code,
+                    registry_source=excluded.registry_source, school_unit_id=excluded.school_unit_id,
+                    sources_json=CASE WHEN schools.registry_source='seeded' THEN schools.sources_json ELSE excluded.sources_json END,
+                    updated_at=excluded.updated_at
+                """,
+                (
+                    item["slug"], item.get("name"), item.get("type"), item.get("grades"), item.get("area"),
+                    item.get("address"), item.get("lat"), item.get("lng"), item.get("profile"), item.get("cityKey"),
+                    item.get("municipality"), item.get("postalCode"), item.get("registrySource"), item.get("schoolUnitId"),
+                    sources_json, imported_at,
+                ),
+            )
+            # Registry-only schools receive a year row so they are visible immediately. Existing survey/academic rows are preserved.
+            conn.execute(
+                """
+                INSERT INTO school_year_metrics (slug, year, lastVerified, verificationNote, imported_at)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(slug, year) DO UPDATE SET
+                    lastVerified=COALESCE(school_year_metrics.lastVerified, excluded.lastVerified),
+                    verificationNote=COALESCE(school_year_metrics.verificationNote, excluded.verificationNote)
+                """,
+                (item["slug"], year, item.get("lastVerified"), item.get("verificationNote"), imported_at),
+            )
+            count += 1
+        conn.execute(
+            "INSERT INTO import_log (source_label, record_count, imported_at) VALUES (?, ?, ?)",
+            (source_label, count, imported_at),
+        )
+        conn.commit()
+    return count
+
+
+def database_baseline(year: int) -> list[dict[str, Any]]:
+    with db() as conn:
+        rows = conn.execute(
+            """
+            SELECT s.*, m.* FROM schools s
+            LEFT JOIN school_year_metrics m ON m.slug=s.slug AND m.year=?
+            WHERE s.school_unit_id IS NOT NULL
+            """,
+            (year,),
+        ).fetchall()
+    result: list[dict[str, Any]] = []
+    for row in rows:
+        item = {
+            "slug": row["slug"], "name": row["name"], "type": row["type"], "grades": row["grades"],
+            "area": row["area"], "address": row["address"], "lat": row["lat"], "lng": row["lng"],
+            "profile": row["profile"], "schoolUnitId": row["school_unit_id"], "cityKey": row["city_key"],
+            "municipality": row["municipality"], "postalCode": row["postal_code"],
+            "registrySource": row["registry_source"], "sources": json.loads(row["sources_json"] or "[]"),
+            "dataYear": year,
+        }
+        for field in METRIC_FIELDS:
+            if field in row.keys():
+                item[field] = row[field]
+        result.append(item)
+    return result
+
+
+def run_registry_sync(import_surveys: bool = True) -> dict[str, Any]:
+    year = datetime.now(timezone.utc).year
+    set_state("registry_sync", {"status": "running", "startedAt": now_iso()})
+    try:
+        items, fetch_meta = fetch_school_units(SCHOOL_REGISTRY_URL, GEOCODER_USER_AGENT)
+        records, parse_meta = build_registry_records(items, CITY_CONFIG, year)
+        imported = upsert_registry_schools(records, "Skolverket school-unit register", year)
+        survey_imported = 0
+        survey_error = None
+        if import_surveys and records:
+            try:
+                cache_dir = DATA_DIR / "source_cache" / "skolenkaten"
+                baseline = database_baseline(year)
+                source_files = ensure_source_files(year, cache_dir, use_network=True)
+                survey_records, survey_meta = build_skolenkaten_import(baseline, source_files, year=year)
+                output_path = IMPORT_DIR / f"schools-{year}-skolenkaten-four-cities.json"
+                write_import_json(survey_records, output_path, survey_meta)
+                survey_imported = upsert_schools(survey_records, output_path.name)
+            except Exception as exc:  # Registry data should remain usable even if survey import fails.
+                survey_error = str(exc)
+        result = {
+            "status": "complete", "year": year, "registryImported": imported,
+            "surveyImported": survey_imported, "surveyError": survey_error,
+            "fetch": fetch_meta, "parse": parse_meta, "finishedAt": now_iso(),
+        }
+        set_state("registry_sync", result)
+        return result
+    except Exception as exc:
+        result = {"status": "failed", "error": str(exc), "finishedAt": now_iso()}
+        set_state("registry_sync", result)
+        return result
+
+
+def start_background_sync_if_needed() -> None:
+    if not AUTO_IMPORT_SCHOOL_REGISTRY:
+        return
+    with db() as conn:
+        count = conn.execute("SELECT COUNT(*) AS n FROM schools WHERE registry_source='Skolverket school-unit register'").fetchone()["n"]
+    state = get_state("registry_sync") or {}
+    if count > 0 or state.get("status") == "running":
+        return
+    thread = threading.Thread(target=run_registry_sync, kwargs={"import_surveys": AUTO_IMPORT_SKOLENKATEN}, daemon=True)
+    thread.start()
 
 def normalize_location_text(value: str | None) -> str:
     clean = (value or "").strip().lower()
@@ -446,14 +688,21 @@ def result_matches_city(result: dict[str, Any], city_key: str) -> bool:
     config = CITY_CONFIG.get(city_key)
     if not config:
         return False
-    aliases = {normalize_location_text(value) for value in config["aliases"]}
+    aliases = {normalize_location_text(value) for value in config.get("municipality_aliases", set())}
     locality_values = {normalize_location_text(value) for value in result_locality_values(result)}
     for locality in locality_values:
         if locality in aliases:
             return True
-        if any(alias and alias in locality for alias in aliases):
+        if any(alias and (alias in locality or locality in alias) for alias in aliases):
             return True
     return False
+
+
+def city_key_for_result(result: dict[str, Any]) -> str | None:
+    for city_key in CITY_CONFIG:
+        if result_matches_city(result, city_key):
+            return city_key
+    return None
 
 
 def detected_municipality(result: dict[str, Any]) -> str | None:
@@ -487,7 +736,7 @@ def fetch_geocode(query: str, city_key: str) -> dict[str, Any]:
     normalized_query = normalize_location_text(clean_query)
     city_label = CITY_CONFIG[city_key]["label"]
     has_country = "sweden" in normalized_query or "sverige" in normalized_query
-    has_city = any(alias in normalized_query for alias in {normalize_location_text(v) for v in CITY_CONFIG[city_key]["aliases"]})
+    has_city = any(alias in normalized_query for alias in {normalize_location_text(v) for v in CITY_CONFIG[city_key].get("search_aliases", set())})
 
     search_candidates: list[str] = []
     base_query = clean_query if has_country else f"{clean_query}, Sweden"
@@ -551,6 +800,8 @@ def fetch_geocode(query: str, city_key: str) -> dict[str, Any]:
             "found": False,
             "insideSelectedCity": False,
             "selectedCity": CITY_CONFIG[city_key]["label"],
+            "selectedCityKey": city_key,
+            "matchedCityKey": None,
             "query": clean_query,
             "message": "No Swedish address or postal code matched the search.",
             "provider": "OpenStreetMap Nominatim",
@@ -565,16 +816,24 @@ def fetch_geocode(query: str, city_key: str) -> dict[str, Any]:
         except (KeyError, TypeError, ValueError) as exc:
             raise HTTPException(status_code=502, detail="Address provider did not return coordinates") from exc
         inside_selected = result_matches_city(chosen, city_key)
+        matched_city_key = city_key_for_result(chosen)
         municipality = detected_municipality(chosen)
         message = (
-            f"Address matched within {CITY_CONFIG[city_key]['label']}."
+            f"Address matched within the {CITY_CONFIG[city_key]['label']} dataset."
             if inside_selected
-            else f"This address appears to be in {municipality or 'another municipality'}, not {CITY_CONFIG[city_key]['label']}."
+            else (
+                f"Address matched the {CITY_CONFIG[matched_city_key]['label']} dataset."
+                if matched_city_key
+                else f"This address appears to be in {municipality or 'another municipality'}, outside the four loaded city datasets."
+            )
         )
         payload = {
             "found": True,
             "insideSelectedCity": inside_selected,
             "selectedCity": CITY_CONFIG[city_key]["label"],
+            "selectedCityKey": city_key,
+            "matchedCityKey": matched_city_key,
+            "matchedCity": CITY_CONFIG.get(matched_city_key, {}).get("label") if matched_city_key else None,
             "query": clean_query,
             "displayName": chosen.get("display_name") or clean_query,
             "lat": lat,
@@ -614,6 +873,7 @@ app.mount("/assets", StaticFiles(directory=STATIC_DIR), name="assets")
 @app.on_event("startup")
 def _startup() -> None:
     bootstrap_database()
+    start_background_sync_if_needed()
 
 
 @app.get("/")
@@ -634,18 +894,86 @@ def geocode_api(
     return fetch_geocode(q, city.strip().lower())
 
 
+def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    from math import asin, cos, radians, sin, sqrt
+    radius = 6371.0088
+    dlat = radians(lat2 - lat1)
+    dlng = radians(lng2 - lng1)
+    a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlng / 2) ** 2
+    return 2 * radius * asin(sqrt(a))
+
+
+@app.get("/api/nearby")
+def nearby_api(
+    q: str = Query(min_length=3, max_length=220),
+    city: str = Query(default="goteborg"),
+    year: str = Query(default=DEFAULT_YEAR_MODE),
+    limit: int = Query(default=12, ge=1, le=50),
+    radius_km: float = Query(default=25.0, ge=1, le=100),
+) -> dict[str, Any]:
+    selected_city = city.strip().lower()
+    if selected_city not in CITY_CONFIG:
+        raise HTTPException(status_code=400, detail="Unsupported city dataset")
+    geocode = fetch_geocode(q, selected_city)
+    if not geocode.get("found"):
+        return {"geocode": geocode, "count": 0, "schools": [], "message": geocode.get("message")}
+    matched_city = geocode.get("matchedCityKey")
+    if not matched_city:
+        return {
+            "geocode": geocode,
+            "count": 0,
+            "schools": [],
+            "message": "The address was found, but it is outside the four loaded city datasets.",
+        }
+    origin_lat = float(geocode["lat"])
+    origin_lng = float(geocode["lng"])
+    with db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM schools WHERE city_key=? AND lat IS NOT NULL AND lng IS NOT NULL",
+            (matched_city,),
+        ).fetchall()
+        candidates: list[dict[str, Any]] = []
+        for school in rows:
+            distance = haversine_km(origin_lat, origin_lng, float(school["lat"]), float(school["lng"]))
+            if distance > radius_km:
+                continue
+            metric, fallback, requested_year = metric_row_for(conn, school["slug"], year)
+            if not metric:
+                continue
+            item = combine_school_and_metric(school, metric, fallback, requested_year)
+            item["distanceKm"] = round(distance, 2)
+            candidates.append(item)
+    candidates.sort(key=lambda item: (item["distanceKm"], -(item.get("qualityScore") or 0)))
+    selected = candidates[:limit]
+    return {
+        "geocode": geocode,
+        "selectedCityKey": selected_city,
+        "matchedCityKey": matched_city,
+        "matchedCityLabel": CITY_CONFIG[matched_city]["label"],
+        "autoSwitched": matched_city != selected_city,
+        "radiusKm": radius_km,
+        "count": len(selected),
+        "schools": selected,
+        "message": (
+            f"Showing tracked schools in the {CITY_CONFIG[matched_city]['label']} dataset."
+            if selected
+            else f"No tracked schools with coordinates were found within {radius_km:g} km. The registry sync may still be running."
+        ),
+    }
+
+
 @app.get("/api/methodology")
 def methodology() -> dict[str, Any]:
     return {
         "version": APP_VERSION,
         "qualityMethodVersion": QUALITY_METHOD_VERSION,
         "qualityFormula": calculate_quality({})["qualityFormula"],
-        "admissionNote": "Admission realism is separate from quality. Municipal values can use Göteborg placement statistics; private-school values should be based on queue rules and verified local knowledge.",
+        "admissionNote": "Admission realism is separate from quality. Municipal admission values require municipality-specific placement data; private-school values should be based on each school’s published admission rules.",
         "yearFallback": "Default year mode is current: the API uses the newest imported official data year and falls back per school only when that current-year record is missing.",
         "recommendedSources": [
             "Skolinspektionen Skolenkäten Excel files for survey ratings: F0 guardians, grundskola guardians, pupils grade 5/8 and teachers.",
             "Skolverket/Utbildningsguiden and national statistics for school-unit facts, teacher ratios and academic results.",
-            "Göteborg Stad placement statistics for municipal admission realism.",
+            "Municipality-specific placement statistics for municipal admission realism where published.",
             "Individual fristående school pages for queue and admission rules."
         ],
     }
@@ -669,14 +997,28 @@ def metadata() -> dict[str, Any]:
         "qualityMethodVersion": QUALITY_METHOD_VERSION,
         "qualityFormula": calculate_quality({})["qualityFormula"],
         "updateMode": "Default mode uses the current imported data year. If a current-year record is missing for a school, the API falls back to the latest prior verified year for that school.",
-        "geocoding": {"provider": "OpenStreetMap Nominatim", "supportedCities": ["goteborg"], "cache": True},
+        "geocoding": {"provider": "OpenStreetMap Nominatim", "supportedCities": list(CITY_CONFIG.keys()), "cache": True},
+        "cities": [
+            {"key": key, "label": config["label"], "municipalityCodes": sorted(config.get("municipality_codes", set()))}
+            for key, config in CITY_CONFIG.items()
+        ],
+        "registrySync": get_state("registry_sync"),
     }
 
 
 @app.get("/api/schools")
-def schools_api(year: str = Query(default=DEFAULT_YEAR_MODE)) -> dict[str, Any]:
+def schools_api(
+    year: str = Query(default=DEFAULT_YEAR_MODE),
+    city: str = Query(default="goteborg"),
+) -> dict[str, Any]:
+    city_key = city.strip().lower()
+    if city_key not in CITY_CONFIG and city_key != "all":
+        raise HTTPException(status_code=400, detail="Unsupported city dataset")
     with db() as conn:
-        school_rows = conn.execute("SELECT * FROM schools ORDER BY name COLLATE NOCASE").fetchall()
+        if city_key == "all":
+            school_rows = conn.execute("SELECT * FROM schools ORDER BY name COLLATE NOCASE").fetchall()
+        else:
+            school_rows = conn.execute("SELECT * FROM schools WHERE city_key=? ORDER BY name COLLATE NOCASE", (city_key,)).fetchall()
         items = []
         fallback_count = 0
         for school in school_rows:
@@ -691,6 +1033,8 @@ def schools_api(year: str = Query(default=DEFAULT_YEAR_MODE)) -> dict[str, Any]:
         resolved_year, year_mode = resolve_year_param(conn, year)
     return {
         "requestedYear": year,
+        "city": city_key,
+        "cityLabel": CITY_CONFIG.get(city_key, {}).get("label", "All cities"),
         "resolvedYear": resolved_year,
         "yearMode": year_mode,
         "currentDataYear": current_year,
@@ -725,6 +1069,19 @@ def school_api(slug: str, year: str = Query(default=DEFAULT_YEAR_MODE)) -> dict[
         history_items.append(history_dict)
     item["history"] = history_items
     return item
+
+
+@app.post("/api/admin/import/school-registry")
+def import_school_registry_api(
+    request: Request,
+    surveys: bool = Query(default=True),
+) -> JSONResponse:
+    admin_token = os.getenv("ADMIN_TOKEN")
+    if admin_token and request.headers.get("x-admin-token") != admin_token:
+        raise HTTPException(status_code=401, detail="Invalid admin token")
+    result = run_registry_sync(import_surveys=surveys)
+    status = 200 if result.get("status") == "complete" else 502
+    return JSONResponse(result, status_code=status)
 
 
 @app.post("/api/admin/import/skolenkaten")

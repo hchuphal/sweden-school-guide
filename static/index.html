@@ -28,7 +28,7 @@
           </svg>
         </span>
         <span class="brand-text">
-          <span class="brand-title-row"><span class="brand-title">Sweden School Guide</span><span class="brand-version">v0.13</span></span>
+          <span class="brand-title-row"><span class="brand-title">Sweden School Guide</span><span class="brand-version">v0.14</span></span>
           <span class="brand-subtitle">School search, ratings and admissions</span>
         </span>
       </div>
@@ -55,9 +55,9 @@
             <span>City</span>
             <select id="citySelect">
               <option value="goteborg" selected>Göteborg</option>
-              <option value="stockholm">Stockholm (coming soon)</option>
-              <option value="malmo">Malmö (coming soon)</option>
-              <option value="uppsala">Uppsala (coming soon)</option>
+              <option value="stockholm">Stockholm</option>
+              <option value="malmo">Malmö</option>
+              <option value="uppsala">Uppsala</option>
             </select>
           </label>
           <p id="cityHelper" class="city-helper">Current dataset: Göteborg.</p>
@@ -117,7 +117,7 @@
           Sort by
           <select id="sortFilter">
             <option value="quality" selected>Quality / rating</option>
-            <option value="nearbyFit">Nearby fit: sample F0 address</option>
+            <option value="nearbyFit">Nearby fit: last searched address</option>
             <option value="admission">Admission realism</option>
             <option value="confidence">Data completeness</option>
             <option value="name">Name A–Z</option>
@@ -132,11 +132,11 @@
       <div class="section-head">
         <div>
           <p class="eyebrow">Address search</p>
-          <h2>Find nearby tracked schools</h2>
+          <h2>Find nearby schools</h2>
         </div>
         <div class="section-note-card compact">
           <strong>Live address lookup</strong>
-          <span>Enter a full Swedish address or postal code. The result is validated against the selected city; school distances remain straight-line estimates rather than route distances.</span>
+          <span>Enter a full Swedish address or postal code. The app detects the loaded city region automatically and returns nearby schools from that dataset. Distances remain straight-line estimates.</span>
         </div>
       </div>
 
@@ -147,7 +147,7 @@
         </label>
         <button id="findNearbyBtn" class="button primary" type="button">Find schools</button>
       </div>
-      <p class="geocoder-attribution">Address lookup by <a href="https://nominatim.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap Nominatim</a>.</p>
+      <p class="geocoder-attribution">Address lookup by <a href="https://nominatim.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap Nominatim</a>. School facts are synchronised from Skolverket’s school-unit register.</p>
       <div id="nearbyResults" class="nearby-results"></div>
     </section>
 
@@ -200,7 +200,7 @@
   </main>
 
   <footer class="footer">
-    <p>Built as MVP v0.13. Backend API + SQLite database + current-year data mode + Skolenkäten importer + collapsible survey/academic/admission sections.</p>
+    <p>Built as MVP v0.14. Four city datasets + Skolverket school registry + Skolenkäten importer + live nearby search.</p>
     <p><a href="/api/metadata">API metadata</a> · <a href="/assets/README.md">README</a></p>
   </footer>
 

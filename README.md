@@ -1,128 +1,71 @@
-# Sweden School Guide MVP v0.13
+# Sweden School Guide MVP v0.14
 
-A Render-ready FastAPI web app for comparing Gothenburg schools for families choosing F0/förskoleklass through F–9.
+FastAPI + SQLite web application for comparing Swedish schools. The current build supports four selectable city datasets:
 
-## What v0.13 adds
+- Göteborg region — Göteborg and Mölndal municipalities
+- Stockholm
+- Malmö
+- Uppsala
 
-- Keeps backend + SQLite database + current-year data mode from v0.7.
-- Keeps the Skolinspektionen Skolenkäten importer from v0.7.
-- Makes every school card clearer by separating information into three visible blocks:
-  1. **Skolenkäten survey ratings**
-  2. **Academic results**
-  3. **Admission realism**
-- Adds `Sources:` before the source links at the bottom of every school card.
-- Rewrites subjective or address-specific text into neutral, city-wide wording.
-- Corrects Ebba Petterssons Privatskola admission wording: annual application, queue place based on exact registration time, no multi-year queue carryover unless a new application is submitted in the next application period.
+## What changed in v0.14
 
-## Important source model
+- All four city options are active.
+- Address lookup no longer rejects a matched address merely because the dropdown was set to another city.
+- A matched address automatically selects the appropriate loaded city dataset.
+- Mölndal addresses are handled inside the Göteborg-region dataset.
+- Nearby search is performed by the backend and returns schools within a configurable radius.
+- A background importer synchronises school facts from Skolverket's national school-unit register.
+- The same pipeline can enrich imported schools with the national Skolinspektionen Skolenkäten files.
+- Registry-only schools remain visible even when detailed rating or admission data is unavailable; missing data is shown as `n/a`, not converted into a misleading quality score.
 
-The app separates source types:
+## Data coverage
 
-| Data type | Primary source |
-|---|---|
-| Survey/rating fields | Skolinspektionen Skolenkäten Excel files |
-| School-unit facts and displayed school pages | Skolverket / Utbildningsguiden |
-| Academic indicators | Skolverket / Utbildningsguiden / national statistics |
-| Municipal admission realism | Göteborg Stad placement statistics |
-| Fristående/private admission rules | Each school's own admission page |
+School name, address, municipality, ownership type, grade coverage and coordinates are imported from Skolverket where available. Survey ratings are imported from Skolinspektionen Skolenkäten when a matching school-unit code exists.
 
-Skolenkäten survey fields shown in v0.13 include:
+Admission realism remains municipality/school specific. Göteborg seeded schools retain the manually verified Göteborg placement signals. Schools in the other cities show `n/a` until local placement or private-admission rules are imported.
 
-- F0 guardian satisfaction
-- Safety / trygghet
-- Study peace / studiero
-- Support / stöd
-- Grade 5 or grade 8 pupil satisfaction
-- Guardian satisfaction for grundskola
-
-Academic score and admission realism are **not** Skolenkäten survey values and are shown separately.
-
-## Current import behavior
-
-For the 15 seeded schools, the included Skolenkäten 2026 import matched 11 schools by `skolenhetskod`.
-
-Schools not matched in the 2026 Skolenkäten Excel files keep existing verified/seeded values and confidence/missing-data treatment:
-
-- Innovitaskolan St Jörgen
-- IES Södra Änggården
-- Göteborgs Högre Samskola / Lilla Samskolan
-- Vittra Kronhusparken
-
-That can happen when a school did not participate in that Skolenkäten year, has no published row in that file, or uses another reporting unit.
-
-## Run locally
+## Local run
 
 ```bash
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-Open:
+Open `http://127.0.0.1:8000`.
+
+## Render Web Service
 
 ```text
-http://localhost:8000
+Build Command: pip install -r requirements.txt
+Start Command: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+Health Check Path: /api/health
 ```
 
-## Render Web Service settings
+The included `render.yaml` enables the background registry and survey sync.
+
+## Important endpoints
 
 ```text
-Build command: pip install -r requirements.txt
-Start command: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+GET  /api/metadata
+GET  /api/schools?city=goteborg&year=current
+GET  /api/nearby?q=Eklanda%20Äng%2076&city=goteborg
+POST /api/admin/import/school-registry?surveys=true
+POST /api/admin/import/skolenkaten?year=2026&apply=true
 ```
 
-## Re-import Skolenkäten data from CLI
+Protect admin endpoints by setting `ADMIN_TOKEN` in Render and sending it as the `x-admin-token` header.
+
+## Import manually
 
 ```bash
-PYTHONPATH=. python scripts/import_skolenkaten.py --year 2026
+PYTHONPATH=. python scripts/import_school_registry.py
 ```
 
-This downloads the official Excel files into `data/source_cache/skolenkaten/2026/`, parses them, and writes:
+Use `--skip-surveys` to import school facts only.
 
-```text
-data/imports/schools-2026-skolenkaten.json
-```
+## Limitations
 
-The app imports JSON files in `data/imports/` on startup.
-
-## Re-import through API
-
-```bash
-curl -X POST "https://YOUR-APP.onrender.com/api/admin/import/skolenkaten?year=2026&apply=true" \
-  -H "x-admin-token: YOUR_ADMIN_TOKEN"
-```
-
-Set `ADMIN_TOKEN` in Render if you want the endpoint protected.
-
-## API endpoints
-
-```text
-/
-/api/health
-/api/metadata
-/api/methodology
-/api/schools?year=current
-/api/schools/{slug}?year=current
-/api/admin/import/skolenkaten?year=2026&apply=true
-/api/import
-```
-
-## Notes
-
-This is still an MVP. It is not yet a fully automated Skolverket/Göteborg import pipeline. The next version should add:
-
-- Skolverket school-unit API importer
-- Göteborg placement-stat parser
-- proper PostgreSQL instead of SQLite for production persistence
-- real geocoding and route distance
-- year trend UI
-
-
-## Address lookup in v0.13
-
-The nearby search now calls the backend `/api/geocode` endpoint, which uses OpenStreetMap Nominatim for low-volume MVP geocoding. Results are cached in SQLite, restricted to Sweden, and validated against the selected city. Full addresses and postal codes are accepted. For production scale, configure a commercial or self-hosted geocoding provider via `GEOCODER_URL`.
-
-
-## v0.13 geocoding fix
-- Added the missing `import requests` that caused all `/api/geocode` calls to return HTTP 500.
-- Added a second city-qualified lookup attempt and clearer timeout/provider/network errors.
-- Added Göteborgs Stad aliases for municipality validation.
+- Nearby distance is straight-line distance, not walking, driving or transit distance.
+- The school-register parser is intentionally defensive because the official API is external and may evolve.
+- Schools without coordinates cannot appear in nearby results until coordinates are supplied by the registry or a separate school-address geocoder.
+- Quality ratings, academic results and admission rules may have different publication years and coverage.

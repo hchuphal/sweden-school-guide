@@ -1,15 +1,19 @@
 let schools = [];
 let metadata = null;
 const YEAR_MODE = "current";
-const SUPPORTED_CITY = "goteborg";
-
-const knownAddresses = [
-  { label: "Långströmsgatan 6, Göteborg", lat: 57.7135, lng: 11.8998, aliases: ["långströmsgatan", "langstromsgatan", "hakefjordsgatan", "jättesten"] },
-  { label: "Lindholmen, Göteborg", lat: 57.7086, lng: 11.9400, aliases: ["lindholmen", "ceresgatan"] },
-  { label: "Eriksberg, Göteborg", lat: 57.7019, lng: 11.9145, aliases: ["eriksberg", "astris"] },
-  { label: "Kvillebäcken, Göteborg", lat: 57.7250, lng: 11.9480, aliases: ["kville", "kvillebäcken", "kvillebacken"] },
-  { label: "Hisings Backa / St Jörgen, Göteborg", lat: 57.7429, lng: 11.9732, aliases: ["st jörgen", "st jorgen", "sankt jörgen", "hisings backa"] }
-];
+const CITY_LABELS = {
+  goteborg: "Göteborg",
+  stockholm: "Stockholm",
+  malmo: "Malmö",
+  uppsala: "Uppsala",
+};
+const CITY_CENTERS = {
+  goteborg: { label: "Göteborg", lat: 57.7089, lng: 11.9746 },
+  stockholm: { label: "Stockholm", lat: 59.3293, lng: 18.0686 },
+  malmo: { label: "Malmö", lat: 55.6050, lng: 13.0038 },
+  uppsala: { label: "Uppsala", lat: 59.8586, lng: 17.6389 },
+};
+let lastNearbyOrigin = CITY_CENTERS.goteborg;
 
 const $ = (id) => document.getElementById(id);
 
@@ -25,6 +29,10 @@ function escapeHtml(value) {
 function fmt(value, suffix = "") {
   if (value === null || value === undefined || Number.isNaN(value)) return "n/a";
   return `${value}${suffix}`;
+}
+
+function fmt100(value) {
+  return value === null || value === undefined || Number.isNaN(value) ? "n/a" : `${value}/100`;
 }
 
 function normalize(text) {
@@ -89,14 +97,12 @@ function confidenceClass(school) {
   return "low";
 }
 
-function nearbyFitScore(school, origin = knownAddresses[0]) {
-  const home = origin;
-  const distance = distanceKm(home, school);
-  const continuityBonus = school.grades === "F–9" ? 8 : 0;
-  const socialContinuityBonus = school.name === "Jättestensskolan" ? 18 : 0;
-  const preferredAreaBonus = ["Herrgårdsskolan", "Taubeskolan", "Lerlyckeskolan", "Innovitaskolan St Jörgen"].includes(school.name) ? 8 : 0;
-  const privateQueuePenalty = school.name === "Fridaskolan Kvillebäcken" ? 35 : 0;
-  return (school.qualityScore || 0) * 0.52 + (school.admissionScore || 0) * 0.22 + continuityBonus + socialContinuityBonus + preferredAreaBonus - distance * 3 - privateQueuePenalty;
+function nearbyFitScore(school, origin = lastNearbyOrigin) {
+  const distance = Number.isFinite(school.distanceKm) ? school.distanceKm : distanceKm(origin, school);
+  const quality = school.qualityScore ?? 45;
+  const admission = school.admissionScore ?? 45;
+  const continuityBonus = school.grades === "F–9" ? 8 : school.grades === "F–6" ? 4 : 0;
+  return quality * 0.58 + admission * 0.18 + continuityBonus - distance * 3.2;
 }
 
 function sortSchools(list, sortMode) {
@@ -120,7 +126,7 @@ function sortNote(sortMode) {
   const notes = {
     quality: "Quality-first sorting uses the computed score. Admission chance is deliberately excluded.",
     admission: "Admission sorting ranks realistic access first. This can push easier-but-weaker schools higher.",
-    nearbyFit: "Nearby fit is a scenario score for the address entered in the nearby section. In the MVP sort menu, the sample scenario uses Långströmsgatan 6 for F0.",
+    nearbyFit: "Nearby fit uses the last successfully searched address. Before a search, it uses the selected city centre.",
     confidence: "Data confidence sorting shows schools with the most complete rating fields first. It does not mean the school is best.",
     name: "Alphabetical sorting is useful for quickly finding a known school."
   };
@@ -212,14 +218,9 @@ function updateCityNotice() {
   const select = $("citySelect");
   const helper = $("cityHelper");
   if (!select || !helper) return;
-  if (select.value === SUPPORTED_CITY) {
-    helper.textContent = "Current dataset: Göteborg.";
-    helper.classList.remove("warn");
-  } else {
-    const label = select.options[select.selectedIndex]?.textContent || "Selected city";
-    helper.textContent = `${label}: coming soon. Current dataset: Göteborg.`;
-    helper.classList.add("warn");
-  }
+  const label = CITY_LABELS[select.value] || select.options[select.selectedIndex]?.textContent || "Selected city";
+  helper.textContent = `Current dataset: ${label}.`;
+  helper.classList.remove("warn");
 }
 
 function schoolCard(school) {
@@ -228,7 +229,7 @@ function schoolCard(school) {
     <article class="school-card">
       <div class="card-topline">
         <h3>${escapeHtml(school.name)}</h3>
-        <span class="score-chip">${fmt(school.qualityScore)}/100</span>
+        <span class="score-chip">${fmt100(school.qualityScore)}</span>
       </div>
       <p class="card-meta">${escapeHtml(school.area)} · ${escapeHtml(school.address)}</p>
       <div class="badges">
@@ -238,7 +239,7 @@ function schoolCard(school) {
         <span class="badge confidence ${confidenceClass(school)}">${escapeHtml(school.dataConfidenceLabel || "Unknown")} confidence</span>
       </div>
       ${dataFreshness(school)}
-      <div class="metric-row"><span>Computed quality score</span><strong>${fmt(school.qualityScore)}/100</strong></div>
+      <div class="metric-row"><span>Computed quality score</span><strong>${fmt100(school.qualityScore)}</strong></div>
       ${surveyRatingsBlock(school)}
       ${academicBlock(school)}
       ${admissionBlock(school)}
@@ -272,59 +273,67 @@ function renderDirectory() {
 
 async function renderNearby() {
   const input = $("addressInput").value;
-  const cityKey = $("citySelect")?.value || SUPPORTED_CITY;
-  $("nearbyResults").innerHTML = `<p class="nearby-context">Looking up the address…</p>`;
-
-  if (cityKey !== SUPPORTED_CITY) {
-    $("nearbyResults").innerHTML = `<div class="notice"><strong>City data not available:</strong> the selected city is marked coming soon. Choose Göteborg to use address search.</div>`;
-    return;
-  }
+  const selectedCity = $("citySelect")?.value || "goteborg";
+  $("nearbyResults").innerHTML = `<p class="nearby-context">Looking up the address and nearby schools…</p>`;
 
   try {
-    const result = await geocodeAddress(input, cityKey);
+    const response = await fetch(`/api/nearby?q=${encodeURIComponent(input)}&city=${encodeURIComponent(selectedCity)}&year=${encodeURIComponent(YEAR_MODE)}&limit=12&radius_km=30`);
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const detail = Array.isArray(payload.detail)
+        ? payload.detail.map(item => item.msg || String(item)).join("; ")
+        : payload.detail;
+      throw new Error(detail || `Nearby search failed (HTTP ${response.status}).`);
+    }
+    const result = payload.geocode || {};
     if (!result.found) {
-      $("nearbyResults").innerHTML = `<div class="notice"><strong>Address not found:</strong> ${escapeHtml(result.message || "Try a full street address or postal code.")}</div>`;
+      $("nearbyResults").innerHTML = `<div class="notice"><strong>Address not found:</strong> ${escapeHtml(result.message || "Try a full Swedish street address or postal code.")}</div>`;
       return;
     }
-    if (!result.insideSelectedCity) {
+
+    if (payload.autoSwitched && payload.matchedCityKey && CITY_LABELS[payload.matchedCityKey]) {
+      $("citySelect").value = payload.matchedCityKey;
+      await loadSchoolsForCity(payload.matchedCityKey);
+      updateCityNotice();
+    }
+
+    lastNearbyOrigin = {
+      label: result.displayName || input,
+      lat: Number(result.lat),
+      lng: Number(result.lng),
+    };
+
+    const nearby = payload.schools || [];
+    if (!nearby.length) {
       $("nearbyResults").innerHTML = `
         <div class="notice">
-          <strong>Outside the selected city:</strong> ${escapeHtml(result.message || "The address is outside the current dataset.")}
+          <strong>No tracked schools returned:</strong> ${escapeHtml(payload.message || "The address is outside the loaded regions or the school-registry sync is still running.")}
           <br><span>Matched address: ${escapeHtml(result.displayName || input)}</span>
         </div>`;
       return;
     }
 
-    const origin = {
-      label: result.displayName || input,
-      lat: Number(result.lat),
-      lng: Number(result.lng),
-    };
-    const nearby = schools
-      .map(school => ({ ...school, distance: distanceKm(origin, school), fit: nearbyFitScore(school, origin) }))
-      .sort((a, b) => a.distance - b.distance || b.fit - a.fit)
-      .slice(0, 6);
-
     $("nearbyResults").innerHTML = `
-      <p class="nearby-context">Matched <strong>${escapeHtml(origin.label)}</strong>${result.postalCode ? ` · postal code ${escapeHtml(result.postalCode)}` : ""}. Distances are straight-line estimates from the matched coordinates.</p>
+      <p class="nearby-context">Matched <strong>${escapeHtml(result.displayName || input)}</strong>${result.postalCode ? ` · postal code ${escapeHtml(result.postalCode)}` : ""}. ${escapeHtml(payload.message || "")} Distances are straight-line estimates.</p>
       ${nearby.map((school, index) => `
         <article class="nearby-card">
           <div>
             <p class="eyebrow">Option ${index + 1}</p>
             <h3>${escapeHtml(school.name)}</h3>
-            <p class="card-meta">${escapeHtml(school.type)} · ${escapeHtml(school.grades)} · ${escapeHtml(school.area)}</p>
+            <p class="card-meta">${escapeHtml(school.type)} · ${escapeHtml(school.grades)} · ${escapeHtml(school.municipality || school.area)}</p>
             ${dataFreshness(school)}
-            <div class="metric-row"><span>Computed quality</span><strong>${fmt(school.qualityScore)}/100</strong></div>
-            <div class="metric-row"><span>Admission realism</span><strong>${fmt(school.admissionScore)}/100</strong></div>
-            <p class="decision-note">${escapeHtml(school.decisionNote || "")}</p>
+            <div class="metric-row"><span>Computed quality</span><strong>${fmt100(school.qualityScore)}</strong></div>
+            <div class="metric-row"><span>Admission realism</span><strong>${fmt100(school.admissionScore)}</strong></div>
+            <p class="decision-note">${escapeHtml(school.decisionNote || school.verificationNote || "Official school record; detailed ratings may not yet be imported.")}</p>
           </div>
           <div class="distance">
-            <strong>${school.distance.toFixed(1)} km</strong>
+            <strong>${Number(school.distanceKm).toFixed(1)} km</strong>
             <span>straight-line</span>
           </div>
         </article>
       `).join("")}
     `;
+    renderDirectory();
   } catch (err) {
     $("nearbyResults").innerHTML = `<div class="notice"><strong>Address lookup failed:</strong> ${escapeHtml(err.message || "Please try again.")}</div>`;
   }
@@ -353,7 +362,7 @@ function compareCard(school) {
       <h3>${escapeHtml(school.name)}</h3>
       <p class="card-meta">${escapeHtml(school.type)} · ${escapeHtml(school.grades)} · ${escapeHtml(school.area)}</p>
       ${dataFreshness(school)}
-      <div class="metric-row"><span>Computed quality</span><strong>${fmt(school.qualityScore)}/100</strong></div>
+      <div class="metric-row"><span>Computed quality</span><strong>${fmt100(school.qualityScore)}</strong></div>
       ${surveyRatingsBlock(school)}
       ${academicBlock(school)}
       ${admissionBlock(school)}
@@ -434,17 +443,25 @@ function updateDataMode(payload) {
   }
 }
 
-async function loadData() {
-  const [metaResponse, schoolsResponse] = await Promise.all([
-    fetch("/api/metadata"),
-    fetch(`/api/schools?year=${encodeURIComponent(YEAR_MODE)}`)
-  ]);
-  if (!metaResponse.ok) throw new Error("Could not load API metadata");
+async function loadSchoolsForCity(cityKey) {
+  const schoolsResponse = await fetch(`/api/schools?year=${encodeURIComponent(YEAR_MODE)}&city=${encodeURIComponent(cityKey)}`);
   if (!schoolsResponse.ok) throw new Error("Could not load school data");
-  metadata = await metaResponse.json();
   const payload = await schoolsResponse.json();
   schools = payload.schools || [];
   updateDataMode(payload);
+  $("schoolNames").innerHTML = schools.map(s => `<option value="${escapeHtml(s.name)}"></option>`).join("");
+  lastNearbyOrigin = CITY_CENTERS[cityKey] || lastNearbyOrigin;
+  renderDirectory();
+  renderCompare();
+  return payload;
+}
+
+async function loadData() {
+  const metaResponse = await fetch("/api/metadata");
+  if (!metaResponse.ok) throw new Error("Could not load API metadata");
+  metadata = await metaResponse.json();
+  const selectedCity = $("citySelect")?.value || "goteborg";
+  return loadSchoolsForCity(selectedCity);
 }
 
 async function init() {
@@ -458,9 +475,15 @@ async function init() {
     return;
   }
 
-  $("schoolNames").innerHTML = schools.map(s => `<option value="${escapeHtml(s.name)}"></option>`).join("");
   ["schoolSearch", "typeFilter", "gradeFilter", "sortFilter"].forEach(id => $(id).addEventListener("input", renderDirectory));
-  $("citySelect")?.addEventListener("change", () => { updateCityNotice(); renderNearby(); });
+  $("citySelect")?.addEventListener("change", async () => {
+    updateCityNotice();
+    try {
+      await loadSchoolsForCity($("citySelect").value);
+    } catch (err) {
+      $("schoolGrid").innerHTML = `<p class="empty">Could not load the selected city: ${escapeHtml(err.message)}</p>`;
+    }
+  });
   $("findNearbyBtn").addEventListener("click", renderNearby);
   $("compareBtn").addEventListener("click", renderCompare);
 
