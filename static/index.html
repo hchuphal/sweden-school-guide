@@ -10,7 +10,28 @@
 <body>
   <header class="hero">
     <nav class="nav">
-      <div class="brand"><span class="brand-mark" aria-hidden="true"><span class="mark-main">S</span><span class="mark-dot">✓</span></span><span class="brand-text"><span class="brand-title">Sweden School Guide</span></span></div>
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 64 64" role="img" focusable="false">
+            <defs>
+              <linearGradient id="schoolGuideGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#2f5f84"/>
+                <stop offset="100%" stop-color="#173a53"/>
+              </linearGradient>
+            </defs>
+            <rect x="4" y="4" width="56" height="56" rx="16" fill="url(#schoolGuideGrad)"/>
+            <path d="M18 30L32 19l14 11" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M22 29.5V44h20V29.5" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="29" y="35" width="6" height="9" rx="1.5" fill="#ffffff"/>
+            <path d="M45.5 18.5h6v6" fill="none" stroke="#f5c94a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M48.5 24.5 24 49" fill="none" stroke="#f5c94a" stroke-width="4" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="brand-text">
+          <span class="brand-title-row"><span class="brand-title">Sweden School Guide</span><span class="brand-version">v0.11</span></span>
+          <span class="brand-subtitle">School search, ratings and admissions</span>
+        </span>
+      </div>
       <div class="nav-links">
         <a href="#directory">Directory</a>
         <a href="#nearby">Nearby</a>
@@ -22,9 +43,9 @@
 
     <section class="hero-content">
       <div>
-        <p class="eyebrow">MVP v0.10 · generic Sweden shell · collapsible school data · F0/F–9</p>
-        <h1>Compare schools in Sweden.</h1>
-        <p class="lede">Built for families choosing förskoleklass and primary school. Select a city to explore available school data. The app separates survey ratings, academic results and admission realism, and calculates quality scores from transparent weighted fields.</p>
+        <p class="eyebrow">School comparison · ratings · admissions · nearby fit · F0/F–9</p>
+        <h1>Compare schools with clearer quality and admission signals.</h1>
+        <p class="lede">Built for families choosing förskoleklass and primary school. Select a city, review the latest imported data, and compare survey ratings, academic results, admission realism and nearby fit in one place.</p>
         <div class="hero-actions">
           <a class="button primary" href="#nearby">Find nearby schools</a>
           <a class="button secondary" href="#compare">Compare schools</a>
@@ -178,7 +199,7 @@
   </main>
 
   <footer class="footer">
-    <p>Built as MVP v0.10. Backend API + SQLite database + current-year data mode + Skolenkäten importer + collapsible survey/academic/admission sections.</p>
+    <p>Built as MVP v0.11. Backend API + SQLite database + current-year data mode + Skolenkäten importer + collapsible survey/academic/admission sections.</p>
     <p><a href="/api/metadata">API metadata</a> · <a href="/assets/README.md">README</a></p>
   </footer>
 

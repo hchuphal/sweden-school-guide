@@ -1,8 +1,8 @@
-# Sweden School Guide MVP v0.10
+# Sweden School Guide MVP v0.11
 
 A Render-ready FastAPI web app for comparing Gothenburg schools for families choosing F0/förskoleklass through F–9.
 
-## What v0.10 adds
+## What v0.11 adds
 
 - Keeps backend + SQLite database + current-year data mode from v0.7.
 - Keeps the Skolinspektionen Skolenkäten importer from v0.7.
@@ -26,7 +26,7 @@ The app separates source types:
 | Municipal admission realism | Göteborg Stad placement statistics |
 | Fristående/private admission rules | Each school's own admission page |
 
-Skolenkäten survey fields shown in v0.10 include:
+Skolenkäten survey fields shown in v0.11 include:
 
 - F0 guardian satisfaction
 - Safety / trygghet
