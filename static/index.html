@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Gothenburg School Guide</title>
-  <meta name="description" content="School-choice guide for expat families in Gothenburg." />
+  <title>Sweden School Guide</title>
+  <meta name="description" content="School-choice guide for families in Sweden, starting with Göteborg." />
   <link rel="stylesheet" href="/assets/styles.css" />
 </head>
 <body>
   <header class="hero">
     <nav class="nav">
-      <div class="brand"><span class="brand-mark">G</span><span>Gothenburg School Guide</span></div>
+      <div class="brand"><span class="brand-mark">SE</span><span class="brand-text"><span class="brand-title">Sweden School Guide</span><span class="brand-subtitle">Starting with Göteborg</span></span></div>
       <div class="nav-links">
         <a href="#directory">Directory</a>
         <a href="#nearby">Nearby</a>
@@ -22,12 +22,24 @@
 
     <section class="hero-content">
       <div>
-        <p class="eyebrow">MVP v0.8 · Clear source blocks + neutral school notes · F0/F–9</p>
-        <h1>Compare Gothenburg schools with ratings, admission realism and location fit.</h1>
-        <p class="lede">For international families choosing förskoleklass and primary school in Göteborg. The app loads the newest imported official data year from the backend, separates survey ratings, academic results and admission realism, and calculates quality scores from transparent weighted fields.</p>
+        <p class="eyebrow">MVP v0.9 · collapsible insight blocks · Sweden-wide shell · F0/F–9</p>
+        <h1>Compare schools in Sweden, starting with Göteborg.</h1>
+        <p class="lede">Built for families choosing förskoleklass and primary school. The app currently ships with Göteborg data, separates survey ratings, academic results and admission realism, and calculates quality scores from transparent weighted fields.</p>
         <div class="hero-actions">
           <a class="button primary" href="#nearby">Find nearby schools</a>
           <a class="button secondary" href="#compare">Compare schools</a>
+        </div>
+        <div class="hero-toolbar">
+          <label class="city-switch">
+            <span>City</span>
+            <select id="citySelect">
+              <option value="goteborg" selected>Göteborg</option>
+              <option value="stockholm">Stockholm (coming soon)</option>
+              <option value="malmo">Malmö (coming soon)</option>
+              <option value="uppsala">Uppsala (coming soon)</option>
+            </select>
+          </label>
+          <p id="cityHelper" class="city-helper">Current dataset: Göteborg. The city selector is ready for future expansion.</p>
         </div>
       </div>
       <div class="hero-card">
@@ -52,7 +64,7 @@
         </div>
         <div class="section-note-card">
           <strong>Default view: quality first.</strong>
-          <span>Use the sort menu to switch to admission realism, nearby fit or data completeness. Each card separates survey ratings, academic results and admission notes.</span>
+          <span>Switch the sort mode when you want admission realism, nearby fit or data completeness. Each school card keeps the quality score visible and places the detailed blocks inside collapsed sections.</span>
         </div>
       </div>
 
@@ -166,7 +178,7 @@
   </main>
 
   <footer class="footer">
-    <p>Built as MVP v0.8. Backend API + SQLite database + current-year data mode + Skolenkäten importer + separated survey/academic/admission sections.</p>
+    <p>Built as MVP v0.9. Backend API + SQLite database + current-year data mode + Skolenkäten importer + collapsible survey/academic/admission sections.</p>
     <p><a href="/api/metadata">API metadata</a> · <a href="/assets/README.md">README</a></p>
   </footer>
 

@@ -1,6 +1,7 @@
 let schools = [];
 let metadata = null;
 const YEAR_MODE = "current";
+const SUPPORTED_CITY = "goteborg";
 
 const knownAddresses = [
   { label: "Långströmsgatan 6, Göteborg", lat: 57.7135, lng: 11.8998, aliases: ["långströmsgatan", "langstromsgatan", "hakefjordsgatan", "jättesten"] },
@@ -146,17 +147,22 @@ function metricCell(label, value, suffix = "/10") {
 
 function insightBlock(title, sourceLabel, rows, note = "") {
   return `
-    <section class="insight-block">
-      <div class="block-title"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(sourceLabel)}</span></div>
-      <div class="metric-grid">${rows.join("")}</div>
-      ${note ? `<p class="block-note">${escapeHtml(note)}</p>` : ""}
-    </section>
+    <details class="insight-details">
+      <summary class="insight-summary">
+        <span class="summary-main">${escapeHtml(title)}</span>
+        <span class="summary-meta">${escapeHtml(sourceLabel)}</span>
+      </summary>
+      <div class="insight-block">
+        <div class="metric-grid">${rows.join("")}</div>
+        ${note ? `<p class="block-note">${escapeHtml(note)}</p>` : ""}
+      </div>
+    </details>
   `;
 }
 
 function surveyRatingsBlock(school) {
   return insightBlock(
-    "1. Skolenkäten survey ratings",
+    "Skolenkäten survey ratings",
     "Parent and pupil survey data",
     [
       metricCell("F0 satisfaction", school.f0Satisfaction),
@@ -172,7 +178,7 @@ function surveyRatingsBlock(school) {
 
 function academicBlock(school) {
   return insightBlock(
-    "2. Academic results",
+    "Academic results",
     "Separate from Skolenkäten",
     [
       metricCell("Academic score", school.academicScore, "/10"),
@@ -184,7 +190,7 @@ function academicBlock(school) {
 
 function admissionBlock(school) {
   return insightBlock(
-    "3. Admission realism",
+    "Admission realism",
     "Separate from quality score",
     [
       metricCell("Admission realism", school.admissionScore, "/100"),
@@ -192,6 +198,20 @@ function admissionBlock(school) {
     ],
     school.admissionNote || "Admission rules should be verified with the school or municipality."
   );
+}
+
+function updateCityNotice() {
+  const select = $("citySelect");
+  const helper = $("cityHelper");
+  if (!select || !helper) return;
+  if (select.value === SUPPORTED_CITY) {
+    helper.textContent = "Current dataset: Göteborg. The city selector is ready for future expansion.";
+    helper.classList.remove("warn");
+  } else {
+    const label = select.options[select.selectedIndex]?.textContent || "Selected city";
+    helper.textContent = `${label} is not loaded yet. Showing Göteborg data for now.`;
+    helper.classList.add("warn");
+  }
 }
 
 function schoolCard(school) {
@@ -400,9 +420,11 @@ async function init() {
 
   $("schoolNames").innerHTML = schools.map(s => `<option value="${escapeHtml(s.name)}"></option>`).join("");
   ["schoolSearch", "typeFilter", "gradeFilter", "sortFilter"].forEach(id => $(id).addEventListener("input", renderDirectory));
+  $("citySelect")?.addEventListener("change", updateCityNotice);
   $("findNearbyBtn").addEventListener("click", renderNearby);
   $("compareBtn").addEventListener("click", renderCompare);
 
+  updateCityNotice();
   renderMethodology();
   renderDirectory();
   renderNearby();
