@@ -1,4 +1,4 @@
-# Sweden School Guide MVP v0.22
+# Sweden School Guide MVP v0.24
 
 FastAPI + SQLite web application for comparing schools in four selectable datasets:
 
@@ -7,47 +7,13 @@ FastAPI + SQLite web application for comparing schools in four selectable datase
 - Malmö
 - Uppsala
 
-## What changed in v0.22
+## What changed in v0.24
 
-- Apartment/unit suffixes such as `lgh1201` are ignored only for map lookup, while the original input is preserved.
-- Nearby tracked and OpenStreetMap records are deduplicated deterministically, with the tracked record retained.
-- Geocoder and frontend cache versions were bumped to prevent stale failures/results.
-
-### Nearby searches no longer depend on the partial tracked list
-
-The nearby endpoint now combines two sources:
-
-1. Tracked records already stored from Skolverket, municipal directories and bundled fallbacks.
-2. Schools discovered around the matched coordinates through OpenStreetMap Overpass.
-
-The two result sets are deduplicated by school name and proximity, then sorted strictly by straight-line distance. Map-only schools are clearly marked and receive no invented quality, academic or admission values.
-
-Map discovery is cached in SQLite for 24 hours and tries two Overpass endpoints. It searches up to 12 km around the address; tracked records can still be returned from the full selected radius.
-
-### Göteborg/Kallebäck correction
-
-`Fridaskolan Kallebäck`, school-unit ID `71240644`, is included as an official bundled fallback with:
-
-- Kallebäcks Torggata 32, 412 77 Göteborg
-- F–9
-- coordinates for nearby ranking
-- published F0 guardian survey values for spring 2026
-
-This makes it available even if the national registry background synchronisation is incomplete.
-
-### Postcode and full-address correction
-
-- Postcode-only searches try Nominatim structured search, city-aware free-form searches and Photon.
-- Known/derived postcode centroids provide an explicitly approximate fallback when public geocoders return no exact postcode point.
-- `412 48` is mapped to the Göteborg dataset and searches from an approximate postcode centre when necessary.
-- A full street address is not discarded merely because the map provider reports a neighbouring or outdated postcode. The street and house-number match is used and the UI displays a warning.
-- Geocoder cache versioning bypasses prior incorrect results.
-
-### Existing v0.19 protections retained
-
-- City requests are cancellable and stale responses cannot overwrite the selected directory.
-- The backend and frontend validate city isolation.
-- Skolenkäten 2025 and 2026 enrichment remains separate from the school-registry import.
+- Nearby results now use order-independent school-entity clustering across tracked and OpenStreetMap records.
+- Duplicate detection combines school-unit IDs, OpenStreetMap IDs, Swedish-normalized names, street/house identities and coordinate proximity.
+- The richest official/tracked record is retained while map-confirmed distance and sources are merged into it.
+- Separate campuses and branches remain separate.
+- Added regression tests for Swedish linking-s variants, three-source duplicates and chain campuses.
 
 ## Data interpretation
 

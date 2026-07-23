@@ -234,7 +234,7 @@ function updateCityNotice() {
   const helper = $("cityHelper");
   if (!select || !helper) return;
   const label = CITY_LABELS[select.value] || select.options[select.selectedIndex]?.textContent || "Selected city";
-  helper.textContent = `Current dataset: ${label}.`;
+  helper.textContent = `${label} dataset`;
   helper.classList.remove("warn");
 }
 

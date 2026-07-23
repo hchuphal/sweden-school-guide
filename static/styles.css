@@ -52,6 +52,9 @@ h3 { margin: 0 0 10px; }
 .city-switch span { display: block; margin-bottom: 6px; color: var(--muted); font-weight: 800; }
 .city-helper { margin: 0; color: var(--muted); font-weight: 650; line-height: 1.45; }
 .city-helper.warn { color: #8a5200; }
+.directory-kicker-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.directory-kicker-row .eyebrow { margin: 0; }
+.dataset-badge { display: inline-flex; align-items: center; min-height: 28px; padding: 5px 10px; border-radius: 999px; border: 1px solid #cfe0dc; background: #edf6f3; color: #315f60; font-size: .78rem; font-weight: 850; letter-spacing: .01em; }
 .button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); cursor: pointer; font-weight: 800; text-decoration: none; background: var(--surface-2); color: var(--ink); }
 .button.primary { background: var(--accent); color: white; border-color: var(--accent); }
 .button.secondary { background: rgba(255,255,255,.65); }

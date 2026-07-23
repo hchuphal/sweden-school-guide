@@ -51,7 +51,7 @@ OVERPASS_URLS = [
         "https://overpass-api.de/api/interpreter,https://overpass.kumi.systems/api/interpreter",
     ).split(",") if url.strip()
 ]
-GEOCODER_CACHE_VERSION = "v6-unit-suffix-normalization-strict-nearby-dedupe"
+GEOCODER_CACHE_VERSION = "v8-global-school-entity-dedupe"
 MAP_SCHOOL_CACHE_TTL_SECONDS = int(os.getenv("MAP_SCHOOL_CACHE_TTL_SECONDS", "86400"))
 POSTCODE_CENTROIDS = {
     # Representative centroids used only when public geocoders cannot resolve a valid postcode.
@@ -93,7 +93,7 @@ CITY_CONFIG = {
 }
 APP_VERSION = "0.21.0"
 
-QUALITY_METHOD_VERSION = "v0.22 strict tracked/map school identity deduplication"
+QUALITY_METHOD_VERSION = "v0.24 global school-entity deduplication and verified coordinates"
 MISSING_VALUE_BASELINE = 6.5
 
 QUALITY_COMPONENTS = [
@@ -1583,6 +1583,36 @@ def discover_nearby_map_schools(lat: float, lng: float, radius_km: float, city_k
     }
 
 
+def _edit_distance_at_most_one(first: str, second: str) -> bool:
+    """Return True when two strings differ by at most one edit.
+
+    This is intentionally narrow. It covers common provider spelling variants
+    such as Jättestenskolan/Jättestensskolan without broadly merging branches
+    that merely share an organisation name.
+    """
+    if first == second:
+        return True
+    if abs(len(first) - len(second)) > 1:
+        return False
+    if len(first) > len(second):
+        first, second = second, first
+    i = j = edits = 0
+    while i < len(first) and j < len(second):
+        if first[i] == second[j]:
+            i += 1
+            j += 1
+            continue
+        edits += 1
+        if edits > 1:
+            return False
+        if len(first) == len(second):
+            i += 1
+        j += 1
+    if j < len(second) or i < len(first):
+        edits += 1
+    return edits <= 1
+
+
 def school_identity_tokens(name: str | None) -> set[str]:
     generic = {"skola", "skolan", "grundskola", "grundskolan", "school", "f", "i"}
     tokens: set[str] = set()
@@ -1596,6 +1626,10 @@ def school_identity_tokens(name: str | None) -> set[str]:
                 break
         if token and token not in generic:
             tokens.add(token)
+            # Swedish compound names may insert a linking/genitive "s" before
+            # "skolan". Map providers sometimes omit it. Keep both variants.
+            if token.endswith("s") and len(token) >= 6:
+                tokens.add(token[:-1])
     return tokens
 
 
@@ -1609,8 +1643,17 @@ def school_names_similar(first: str | None, second: str | None) -> bool:
     a_tokens, b_tokens = school_identity_tokens(first), school_identity_tokens(second)
     if not a_tokens or not b_tokens:
         return False
-    overlap = len(a_tokens & b_tokens)
-    return overlap >= 1 and overlap / max(1, min(len(a_tokens), len(b_tokens))) >= 0.6
+    if a_tokens & b_tokens:
+        overlap = len(a_tokens & b_tokens)
+        if overlap / max(1, min(len(a_tokens), len(b_tokens))) >= 0.5:
+            return True
+    # Allow one-character provider variations only for substantial identity
+    # tokens. Address/proximity checks in _nearby_candidates_duplicate still
+    # guard against merging separate campuses.
+    return any(
+        len(left) >= 6 and len(right) >= 6 and _edit_distance_at_most_one(left, right)
+        for left in a_tokens for right in b_tokens
+    )
 
 
 def map_school_api_item(school: dict[str, Any], distance: float, requested_year: int | None) -> dict[str, Any]:
@@ -1639,6 +1682,7 @@ def map_school_api_item(school: dict[str, Any], distance: float, requested_year:
 
 
 def _candidate_source_priority(candidate: dict[str, Any]) -> int:
+    """Prefer official/tracked records over map-only discoveries."""
     return 0 if not candidate.get("mapDiscovered") else 1
 
 
@@ -1655,16 +1699,79 @@ def school_street_identity(address: str | None) -> str:
         return ""
     first_segment = re.split(r"[,;\n]", raw, maxsplit=1)[0]
     normalized = normalize_location_text(first_segment)
-    # Some sources put postcode immediately after the house number without a
-    # comma. Remove Swedish five-digit postcodes from the identity string.
     normalized = re.sub(r"\b\d{3}\s?\d{2}\b", " ", normalized)
     return re.sub(r"\s+", " ", normalized).strip()
 
 
+def school_name_identity(name: str | None) -> str:
+    """Create a conservative identity key for Swedish school names.
+
+    This removes only generic school suffixes and normalises the common Swedish
+    linking-s variation before *skolan*. Campus/branch names are deliberately
+    retained, so Noblaskolan Lindholmen and Noblaskolan Kviberg stay separate.
+    """
+    value = normalize_location_text(name)
+    if not value:
+        return ""
+    words: list[str] = []
+    for raw in value.split():
+        token = raw
+        for suffix in ("grundskolan", "grundskola", "skolan", "skola", "school"):
+            if token.endswith(suffix) and len(token) > len(suffix) + 2:
+                token = token[:-len(suffix)]
+                # Providers frequently differ only on a Swedish linking-s.
+                if token.endswith("s") and len(token) >= 6:
+                    token = token[:-1]
+                break
+        if token not in {"skola", "skolan", "grundskola", "grundskolan", "school"}:
+            words.append(token)
+    return " ".join(words).strip()
+
+
+def _candidate_coordinates(candidate: dict[str, Any]) -> tuple[float, float] | None:
+    try:
+        return float(candidate.get("lat")), float(candidate.get("lng"))
+    except (TypeError, ValueError):
+        return None
+
+
+def _candidate_proximity_km(first: dict[str, Any], second: dict[str, Any]) -> float:
+    a = _candidate_coordinates(first)
+    b = _candidate_coordinates(second)
+    if not a or not b:
+        return 999.0
+    return haversine_km(a[0], a[1], b[0], b[1])
+
+
+def _candidate_osm_identity(candidate: dict[str, Any]) -> str:
+    for key in ("osmId", "osm_id", "mapId", "elementId"):
+        value = candidate.get(key)
+        if value:
+            return str(value)
+    for source in candidate.get("sources", []):
+        if not isinstance(source, dict):
+            continue
+        url = str(source.get("url") or "")
+        match = re.search(r"openstreetmap\.org/(?:node|way|relation)/(\d+)", url)
+        if match:
+            return match.group(1)
+    return ""
+
+
 def _nearby_candidates_duplicate(first: dict[str, Any], second: dict[str, Any]) -> bool:
+    """Decide whether two nearby candidates represent the same school entity.
+
+    Matching is deliberately multi-signal. It catches provider spelling and
+    coordinate variations while preserving genuinely separate campuses.
+    """
     first_unit = first.get("school_unit_id") or first.get("schoolUnitId")
     second_unit = second.get("school_unit_id") or second.get("schoolUnitId")
     if first_unit and second_unit and str(first_unit) == str(second_unit):
+        return True
+
+    first_osm = _candidate_osm_identity(first)
+    second_osm = _candidate_osm_identity(second)
+    if first_osm and second_osm and first_osm == second_osm:
         return True
 
     first_name = normalize_location_text(first.get("name"))
@@ -1672,63 +1779,115 @@ def _nearby_candidates_duplicate(first: dict[str, Any], second: dict[str, Any]) 
     if not first_name or not second_name:
         return False
 
-    # An exact normalized school name within one nearby search is a stronger
-    # identity signal than provider coordinate placement. OSM may pin a school
-    # to a building centroid while the registry pins the entrance, producing
-    # hundreds of metres of apparent drift. Always retain the tracked record.
+    first_identity = school_name_identity(first.get("name"))
+    second_identity = school_name_identity(second.get("name"))
+    first_street = school_street_identity(first.get("address"))
+    second_street = school_street_identity(second.get("address"))
+    proximity = _candidate_proximity_km(first, second)
+
+    # Exact full names are strong, but still require the same local campus area
+    # unless the street identity is also equal. This avoids merging identically
+    # named schools in different municipalities.
     if first_name == second_name:
-        return True
+        return bool(first_street and first_street == second_street) or proximity <= 2.0
+
+    # Canonical Swedish name identity handles variations such as
+    # Jättestenskolan/Jättestensskolan. Require location support to keep chain
+    # campuses distinct.
+    if first_identity and first_identity == second_identity:
+        return bool(first_street and first_street == second_street) or proximity <= 1.5
 
     if not school_names_similar(first.get("name"), second.get("name")):
         return False
 
-    first_street = school_street_identity(first.get("address"))
-    second_street = school_street_identity(second.get("address"))
     if first_street and second_street and first_street == second_street:
         return True
 
-    try:
-        proximity = haversine_km(
-            float(first.get("lat")), float(first.get("lng")),
-            float(second.get("lat")), float(second.get("lng")),
-        )
-    except (TypeError, ValueError):
-        proximity = 999.0
-
-    # Fuzzy-name matches still require close coordinates to avoid merging
-    # separate branches of the same school organisation.
+    # Fuzzy-name matches need tighter geographic evidence.
     return proximity <= 0.8
 
 
-def deduplicate_nearby_candidates(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    ordered = sorted(
-        candidates,
-        key=lambda item: (
-            _candidate_source_priority(item),
-            float(item.get("distanceKm") if item.get("distanceKm") is not None else 9999),
-            normalize_location_text(item.get("name")),
-        ),
-    )
-    unique: list[dict[str, Any]] = []
-    for candidate in ordered:
-        duplicate = next((item for item in unique if _nearby_candidates_duplicate(item, candidate)), None)
-        if duplicate is None:
-            unique.append(candidate)
-            continue
-        duplicate["mapConfirmed"] = bool(
-            duplicate.get("mapConfirmed") or candidate.get("mapDiscovered") or candidate.get("mapConfirmed")
-        )
-        existing_urls = {
-            item.get("url") for item in duplicate.get("sources", []) if isinstance(item, dict)
-        }
-        for source in candidate.get("sources", []):
+def _candidate_richness(candidate: dict[str, Any]) -> tuple[int, int, int, float]:
+    """Score a record so the richest official candidate becomes cluster leader."""
+    tracked = 1 if not candidate.get("mapDiscovered") else 0
+    unit = 1 if (candidate.get("schoolUnitId") or candidate.get("school_unit_id")) else 0
+    metrics = sum(candidate.get(field) is not None for field in METRIC_FIELDS)
+    completeness = float(candidate.get("dataCompletenessPct") or 0)
+    return tracked, unit, metrics, completeness
+
+
+def _merge_candidate_cluster(cluster: list[dict[str, Any]]) -> dict[str, Any]:
+    leader = max(cluster, key=_candidate_richness)
+    merged = dict(leader)
+    merged["sources"] = [dict(item) for item in leader.get("sources", []) if isinstance(item, dict)]
+    existing_urls = {item.get("url") for item in merged["sources"]}
+
+    distances: list[float] = []
+    for item in cluster:
+        try:
+            distances.append(float(item.get("distanceKm")))
+        except (TypeError, ValueError):
+            pass
+        for source in item.get("sources", []):
             if isinstance(source, dict) and source.get("url") not in existing_urls:
-                duplicate.setdefault("sources", []).append(source)
+                merged["sources"].append(source)
                 existing_urls.add(source.get("url"))
-        duplicate["distanceKm"] = min(
-            float(duplicate.get("distanceKm") if duplicate.get("distanceKm") is not None else 9999),
-            float(candidate.get("distanceKm") if candidate.get("distanceKm") is not None else 9999),
+
+    map_items = [item for item in cluster if item.get("mapDiscovered") or item.get("mapConfirmed")]
+    if map_items:
+        merged["mapConfirmed"] = True
+        nearest_map = min(
+            map_items,
+            key=lambda item: float(item.get("distanceKm") if item.get("distanceKm") is not None else 9999),
         )
+        merged["mapConfirmedCoordinates"] = {
+            "lat": nearest_map.get("lat"), "lng": nearest_map.get("lng")
+        }
+    if distances:
+        merged["distanceKm"] = min(distances)
+    # The retained card is official/tracked whenever a tracked member exists.
+    if any(not item.get("mapDiscovered") for item in cluster):
+        merged["mapDiscovered"] = False
+    merged["deduplicatedRecordCount"] = len(cluster)
+    return merged
+
+
+def deduplicate_nearby_candidates(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Cluster all likely duplicate school entities before sorting.
+
+    A union-find pass is order-independent, unlike first-match merging. This
+    matters when three sources use slightly different names, addresses or map
+    points for the same campus.
+    """
+    count = len(candidates)
+    parent = list(range(count))
+
+    def find(index: int) -> int:
+        while parent[index] != index:
+            parent[index] = parent[parent[index]]
+            index = parent[index]
+        return index
+
+    def union(left: int, right: int) -> None:
+        a, b = find(left), find(right)
+        if a != b:
+            parent[b] = a
+
+    for left in range(count):
+        for right in range(left + 1, count):
+            if _nearby_candidates_duplicate(candidates[left], candidates[right]):
+                union(left, right)
+
+    clusters: dict[int, list[dict[str, Any]]] = {}
+    for index, candidate in enumerate(candidates):
+        clusters.setdefault(find(index), []).append(candidate)
+
+    unique = [_merge_candidate_cluster(cluster) for cluster in clusters.values()]
+    unique.sort(key=lambda item: (
+        float(item.get("distanceKm") if item.get("distanceKm") is not None else 9999),
+        _candidate_source_priority(item),
+        normalize_location_text(item.get("name")),
+    ))
     return unique
 
 
@@ -1740,28 +1899,18 @@ def merge_nearby_school_candidates(
     radius_km: float,
     requested_year: int | None,
 ) -> tuple[list[dict[str, Any]], int]:
-    merged = list(tracked)
-    added = 0
+    """Combine sources, then let the global cluster pass resolve identities."""
+    candidates = list(tracked)
+    map_count = 0
     for map_school in mapped:
         distance = haversine_km(origin_lat, origin_lng, float(map_school["lat"]), float(map_school["lng"]))
         if distance > radius_km:
             continue
-        duplicate: dict[str, Any] | None = None
-        map_candidate = map_school_api_item(map_school, distance, requested_year)
-        for candidate in merged:
-            if _nearby_candidates_duplicate(candidate, map_candidate):
-                duplicate = candidate
-                break
-        if duplicate:
-            duplicate["mapConfirmed"] = True
-            existing_urls = {item.get("url") for item in duplicate.get("sources", [])}
-            for source in map_school.get("sources", []):
-                if source.get("url") not in existing_urls:
-                    duplicate.setdefault("sources", []).append(source)
-            continue
-        merged.append(map_candidate)
-        added += 1
-    return merged, added
+        candidates.append(map_school_api_item(map_school, distance, requested_year))
+        map_count += 1
+    deduplicated = deduplicate_nearby_candidates(candidates)
+    retained_map_only = sum(1 for item in deduplicated if item.get("mapDiscovered"))
+    return deduplicated, retained_map_only
 
 
 @app.get("/api/nearby")
@@ -1822,7 +1971,6 @@ def nearby_api(
     candidates, map_added = merge_nearby_school_candidates(
         tracked_candidates, mapped_schools, origin_lat, origin_lng, radius_km, requested_year
     )
-    candidates = deduplicate_nearby_candidates(candidates)
     map_added = sum(1 for item in candidates if item.get("mapDiscovered"))
     candidates.sort(key=lambda item: (item["distanceKm"], -(item.get("qualityScore") or 0), item.get("name") or ""))
     selected = candidates[:limit]

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Sweden School Guide</title>
   <meta name="description" content="School-choice guide for families in Sweden." />
-  <link rel="stylesheet" href="/assets/styles.css?v=0.21" />
+  <link rel="stylesheet" href="/assets/styles.css?v=0.24" />
 </head>
 <body>
   <header class="hero">
@@ -28,7 +28,7 @@
           </svg>
         </span>
         <span class="brand-text">
-          <span class="brand-title-row"><span class="brand-title">Sweden School Guide</span><span class="brand-version">v0.22</span></span>
+          <span class="brand-title-row"><span class="brand-title">Sweden School Guide</span><span class="brand-version">v0.24</span></span>
           <span class="brand-subtitle">School search, ratings and admissions</span>
         </span>
       </div>
@@ -52,7 +52,7 @@
         </div>
         <div class="hero-toolbar">
           <label class="city-switch">
-            <span>City</span>
+            <span>Choose city</span>
             <select id="citySelect">
               <option value="goteborg" selected>Göteborg</option>
               <option value="stockholm">Stockholm</option>
@@ -60,7 +60,6 @@
               <option value="uppsala">Uppsala</option>
             </select>
           </label>
-          <p id="cityHelper" class="city-helper">Current dataset: Göteborg.</p>
         </div>
       </div>
       <div class="hero-card">
@@ -80,7 +79,10 @@
     <section class="section" id="directory">
       <div class="section-head">
         <div>
-          <p class="eyebrow">Directory</p>
+          <div class="directory-kicker-row">
+            <p class="eyebrow">Directory</p>
+            <span id="cityHelper" class="dataset-badge">Göteborg dataset</span>
+          </div>
           <h2 id="directoryTitle">Göteborg school directory</h2>
           <p id="directoryMeta" class="directory-meta">Loading schools…</p>
         </div>
@@ -202,10 +204,10 @@
   </main>
 
   <footer class="footer">
-    <p>Built as MVP v0.22. Four city datasets + unit-aware address matching + strict tracked/map school deduplication.</p>
+    <p>Built as MVP v0.24. Four city datasets + global school-entity deduplication + cleaner dataset status.</p>
     <p><a href="/api/metadata">API metadata</a> · <a href="/assets/README.md">README</a></p>
   </footer>
 
-  <script src="/assets/app.js?v=0.21"></script>
+  <script src="/assets/app.js?v=0.24"></script>
 </body>
 </html>
