@@ -1,4 +1,4 @@
-# Sweden School Guide MVP v0.24
+# Sweden School Guide MVP v0.25
 
 FastAPI + SQLite web application for comparing schools in four selectable datasets:
 
@@ -7,7 +7,7 @@ FastAPI + SQLite web application for comparing schools in four selectable datase
 - Malmö
 - Uppsala
 
-## What changed in v0.24
+## What changed in v0.25
 
 - Nearby results now use order-independent school-entity clustering across tracked and OpenStreetMap records.
 - Duplicate detection combines school-unit IDs, OpenStreetMap IDs, Swedish-normalized names, street/house identities and coordinate proximity.

@@ -51,7 +51,7 @@ OVERPASS_URLS = [
         "https://overpass-api.de/api/interpreter,https://overpass.kumi.systems/api/interpreter",
     ).split(",") if url.strip()
 ]
-GEOCODER_CACHE_VERSION = "v8-global-school-entity-dedupe"
+GEOCODER_CACHE_VERSION = "v9-school-facility-filter"
 MAP_SCHOOL_CACHE_TTL_SECONDS = int(os.getenv("MAP_SCHOOL_CACHE_TTL_SECONDS", "86400"))
 POSTCODE_CENTROIDS = {
     # Representative centroids used only when public geocoders cannot resolve a valid postcode.
@@ -93,7 +93,7 @@ CITY_CONFIG = {
 }
 APP_VERSION = "0.21.0"
 
-QUALITY_METHOD_VERSION = "v0.24 global school-entity deduplication and verified coordinates"
+QUALITY_METHOD_VERSION = "v0.25 school-entity deduplication with non-school facility filtering"
 MISSING_VALUE_BASELINE = 6.5
 
 QUALITY_COMPONENTS = [
@@ -1417,7 +1417,7 @@ def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
 
 
 def map_school_cache_key(lat: float, lng: float, radius_km: float) -> str:
-    return f"osm-schools-v2:{lat:.3f}:{lng:.3f}:{radius_km:.1f}"
+    return f"osm-schools-v3:{lat:.3f}:{lng:.3f}:{radius_km:.1f}"
 
 
 def _normalise_osm_grade(value: str | None) -> str | None:
@@ -1461,17 +1461,65 @@ def infer_osm_school_type(tags: dict[str, Any]) -> str:
 
 
 def is_relevant_ground_school(name: str, tags: dict[str, Any]) -> bool:
-    text = normalize_location_text(" ".join(str(value or "") for value in (name, tags.get("description"), tags.get("school:grades"), tags.get("isced:level"))))
+    """Return True only for an actual compulsory-school entity.
+
+    OpenStreetMap sometimes gives individual campus buildings (sports halls,
+    gymnasiums, auditoriums, etc.) ``building=school`` because they belong to a
+    school site. Those are facilities, not separate schools, and must never be
+    returned as nearby school options.
+    """
+    name_text = normalize_location_text(name)
+    text = normalize_location_text(" ".join(str(value or "") for value in (
+        name, tags.get("description"), tags.get("school:grades"),
+        tags.get("isced:level"), tags.get("amenity"), tags.get("leisure"),
+        tags.get("building"), tags.get("sport"), tags.get("facility"),
+    )))
+
+    leisure = normalize_location_text(tags.get("leisure"))
+    amenity = normalize_location_text(tags.get("amenity"))
+    building = normalize_location_text(tags.get("building"))
+
+    # A campus facility can be physically part of a school while remaining a
+    # separate sports or assembly venue. Explicit facility tags take priority
+    # over the generic building=school tag.
+    facility_values = {
+        "sports hall", "sports centre", "fitness centre", "stadium",
+        "pitch", "track", "swimming pool", "recreation ground",
+    }
+    if leisure in facility_values or amenity in {"community centre", "events venue"}:
+        return False
+
+    facility_name_terms = (
+        "idrottshall", "sporthall", "sporthallen", "hallen", "gymnastiksal",
+        "gymnastikhall", "arena", "simhall", "aktivitetshall",
+        "aktivitetshus", "aula", "matsal", "bibliotek",
+    )
+    if any(term in name_text.split() or name_text.endswith(term) for term in facility_name_terms):
+        return False
+
     excluded = (
-        "forskola", "preschool", "kindergarten", "gymnasium", "high school", "universitet",
-        "university", "hogskola", "komvux", "folkhogskola", "trafikskola", "kulturskola",
+        "forskola", "preschool", "kindergarten", "gymnasium", "high school",
+        "universitet", "university", "hogskola", "komvux", "folkhogskola",
+        "trafikskola", "kulturskola",
     )
     grade_evidence = bool(_normalise_osm_grade(str(tags.get("school:grades") or ""))) or any(
         level in normalize_location_text(tags.get("isced:level")).split() for level in ("1", "2")
     )
     if any(token in text for token in excluded) and not grade_evidence:
         return False
-    return bool(name.strip())
+
+    # amenity=school is the strongest OSM signal. For building=school-only
+    # records, require a school-like name or grade evidence so a named campus
+    # building cannot masquerade as a school.
+    school_name_signal = any(term in name_text for term in (
+        "skola", "skolan", "grundskola", "school", "academy", "akademi",
+        "montessori", "friskola",
+    ))
+    if amenity == "school":
+        return bool(name.strip())
+    if building == "school":
+        return bool(name.strip()) and (school_name_signal or grade_evidence)
+    return False
 
 
 def osm_school_address(tags: dict[str, Any], fallback_city: str) -> str:
