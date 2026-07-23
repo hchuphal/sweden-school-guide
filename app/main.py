@@ -51,7 +51,7 @@ OVERPASS_URLS = [
         "https://overpass-api.de/api/interpreter,https://overpass.kumi.systems/api/interpreter",
     ).split(",") if url.strip()
 ]
-GEOCODER_CACHE_VERSION = "v5-unit-suffix-normalization-nearby-dedupe"
+GEOCODER_CACHE_VERSION = "v6-unit-suffix-normalization-strict-nearby-dedupe"
 MAP_SCHOOL_CACHE_TTL_SECONDS = int(os.getenv("MAP_SCHOOL_CACHE_TTL_SECONDS", "86400"))
 POSTCODE_CENTROIDS = {
     # Representative centroids used only when public geocoders cannot resolve a valid postcode.
@@ -93,7 +93,7 @@ CITY_CONFIG = {
 }
 APP_VERSION = "0.21.0"
 
-QUALITY_METHOD_VERSION = "v0.21 unit-aware address lookup and deterministic nearby-school deduplication"
+QUALITY_METHOD_VERSION = "v0.22 strict tracked/map school identity deduplication"
 MISSING_VALUE_BASELINE = 6.5
 
 QUALITY_COMPONENTS = [
@@ -1417,7 +1417,7 @@ def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
 
 
 def map_school_cache_key(lat: float, lng: float, radius_km: float) -> str:
-    return f"osm-schools-v1:{lat:.3f}:{lng:.3f}:{radius_km:.1f}"
+    return f"osm-schools-v2:{lat:.3f}:{lng:.3f}:{radius_km:.1f}"
 
 
 def _normalise_osm_grade(value: str | None) -> str | None:
@@ -1642,6 +1642,25 @@ def _candidate_source_priority(candidate: dict[str, Any]) -> int:
     return 0 if not candidate.get("mapDiscovered") else 1
 
 
+def school_street_identity(address: str | None) -> str:
+    """Return a stable street + house-number identity for deduplication.
+
+    Map and registry addresses often differ only by postcode, municipality text,
+    punctuation or country suffix. The first address segment is normally the
+    street/house pair; retaining it prevents those harmless differences from
+    creating duplicate nearby cards.
+    """
+    raw = (address or "").strip()
+    if not raw:
+        return ""
+    first_segment = re.split(r"[,;\n]", raw, maxsplit=1)[0]
+    normalized = normalize_location_text(first_segment)
+    # Some sources put postcode immediately after the house number without a
+    # comma. Remove Swedish five-digit postcodes from the identity string.
+    normalized = re.sub(r"\b\d{3}\s?\d{2}\b", " ", normalized)
+    return re.sub(r"\s+", " ", normalized).strip()
+
+
 def _nearby_candidates_duplicate(first: dict[str, Any], second: dict[str, Any]) -> bool:
     first_unit = first.get("school_unit_id") or first.get("schoolUnitId")
     second_unit = second.get("school_unit_id") or second.get("schoolUnitId")
@@ -1650,8 +1669,23 @@ def _nearby_candidates_duplicate(first: dict[str, Any], second: dict[str, Any]) 
 
     first_name = normalize_location_text(first.get("name"))
     second_name = normalize_location_text(second.get("name"))
+    if not first_name or not second_name:
+        return False
+
+    # An exact normalized school name within one nearby search is a stronger
+    # identity signal than provider coordinate placement. OSM may pin a school
+    # to a building centroid while the registry pins the entrance, producing
+    # hundreds of metres of apparent drift. Always retain the tracked record.
+    if first_name == second_name:
+        return True
+
     if not school_names_similar(first.get("name"), second.get("name")):
         return False
+
+    first_street = school_street_identity(first.get("address"))
+    second_street = school_street_identity(second.get("address"))
+    if first_street and second_street and first_street == second_street:
+        return True
 
     try:
         proximity = haversine_km(
@@ -1661,18 +1695,8 @@ def _nearby_candidates_duplicate(first: dict[str, Any], second: dict[str, Any]) 
     except (TypeError, ValueError):
         proximity = 999.0
 
-    first_address = normalize_location_text(first.get("address"))
-    second_address = normalize_location_text(second.get("address"))
-    same_address = bool(first_address and second_address and (
-        first_address == second_address
-        or first_address in second_address
-        or second_address in first_address
-    ))
-
-    if first_name == second_name and proximity <= 1.5:
-        return True
-    if same_address and proximity <= 1.0:
-        return True
+    # Fuzzy-name matches still require close coordinates to avoid merging
+    # separate branches of the same school organisation.
     return proximity <= 0.8
 
 
@@ -1723,15 +1747,9 @@ def merge_nearby_school_candidates(
         if distance > radius_km:
             continue
         duplicate: dict[str, Any] | None = None
+        map_candidate = map_school_api_item(map_school, distance, requested_year)
         for candidate in merged:
-            candidate_lat, candidate_lng = candidate.get("lat"), candidate.get("lng")
-            proximity = 999.0
-            if candidate_lat is not None and candidate_lng is not None:
-                proximity = haversine_km(float(candidate_lat), float(candidate_lng), float(map_school["lat"]), float(map_school["lng"]))
-            if school_names_similar(candidate.get("name"), map_school.get("name")) and proximity <= 0.8:
-                duplicate = candidate
-                break
-            if proximity <= 0.06 and school_identity_tokens(candidate.get("name")) & school_identity_tokens(map_school.get("name")):
+            if _nearby_candidates_duplicate(candidate, map_candidate):
                 duplicate = candidate
                 break
         if duplicate:
@@ -1741,7 +1759,7 @@ def merge_nearby_school_candidates(
                 if source.get("url") not in existing_urls:
                     duplicate.setdefault("sources", []).append(source)
             continue
-        merged.append(map_school_api_item(map_school, distance, requested_year))
+        merged.append(map_candidate)
         added += 1
     return merged, added
 
