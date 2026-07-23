@@ -1,4 +1,4 @@
-# Sweden School Guide MVP v0.20
+# Sweden School Guide MVP v0.21
 
 FastAPI + SQLite web application for comparing schools in four selectable datasets:
 
@@ -7,7 +7,11 @@ FastAPI + SQLite web application for comparing schools in four selectable datase
 - Malmö
 - Uppsala
 
-## What changed in v0.20
+## What changed in v0.21
+
+- Apartment/unit suffixes such as `lgh1201` are ignored only for map lookup, while the original input is preserved.
+- Nearby tracked and OpenStreetMap records are deduplicated deterministically, with the tracked record retained.
+- Geocoder and frontend cache versions were bumped to prevent stale failures/results.
 
 ### Nearby searches no longer depend on the partial tracked list
 

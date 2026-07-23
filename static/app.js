@@ -325,7 +325,7 @@ async function renderNearby() {
     }
     const result = payload.geocode || {};
     if (!result.found) {
-      $("nearbyResults").innerHTML = `<div class="notice"><strong>Address not found:</strong> ${escapeHtml(result.message || "Try a full Swedish street address or postal code.")}</div>`;
+      $("nearbyResults").innerHTML = `<div class="notice"><strong>Address not found:</strong> ${escapeHtml(result.message || "Try a full Swedish street address or postal code.")}${result.queryWarning ? `<br><span>${escapeHtml(result.queryWarning)}</span>` : ""}</div>`;
       return;
     }
 
@@ -352,6 +352,9 @@ async function renderNearby() {
       return;
     }
 
+    const queryWarning = result.queryWarning
+      ? `<div class="notice nearby-warning"><strong>Address adjustment:</strong> ${escapeHtml(result.queryWarning)}</div>`
+      : "";
     const postcodeWarning = result.postcodeWarning
       ? `<div class="notice nearby-warning"><strong>Location note:</strong> ${escapeHtml(result.postcodeWarning)}</div>`
       : "";
@@ -360,6 +363,7 @@ async function renderNearby() {
       : "";
     $("nearbyResults").innerHTML = `
       <p class="nearby-context">Matched <strong>${escapeHtml(result.displayName || input)}</strong>${result.postalCode ? ` · postal code ${escapeHtml(result.postalCode)}` : ""}${result.approximate ? " · approximate postcode point" : ""}. ${escapeHtml(payload.message || "")} Distances are straight-line estimates.</p>
+      ${queryWarning}
       ${postcodeWarning}
       ${discoveryNote}
       ${nearby.map((school, index) => `

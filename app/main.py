@@ -51,7 +51,7 @@ OVERPASS_URLS = [
         "https://overpass-api.de/api/interpreter,https://overpass.kumi.systems/api/interpreter",
     ).split(",") if url.strip()
 ]
-GEOCODER_CACHE_VERSION = "v4-postcode-flexible-map-discovery"
+GEOCODER_CACHE_VERSION = "v5-unit-suffix-normalization-nearby-dedupe"
 MAP_SCHOOL_CACHE_TTL_SECONDS = int(os.getenv("MAP_SCHOOL_CACHE_TTL_SECONDS", "86400"))
 POSTCODE_CENTROIDS = {
     # Representative centroids used only when public geocoders cannot resolve a valid postcode.
@@ -91,9 +91,9 @@ CITY_CONFIG = {
         "search_aliases": {"uppsala"},
     },
 }
-APP_VERSION = "0.20.0"
+APP_VERSION = "0.21.0"
 
-QUALITY_METHOD_VERSION = "v0.20 city-isolated directories, flexible postcode geocoding and live nearby-school discovery"
+QUALITY_METHOD_VERSION = "v0.21 unit-aware address lookup and deterministic nearby-school deduplication"
 MISSING_VALUE_BASELINE = 6.5
 
 QUALITY_COMPONENTS = [
@@ -930,6 +930,28 @@ def query_without_postcode(value: str) -> str:
     return POSTCODE_RE.sub(" ", value or "")
 
 
+UNIT_SUFFIX_RE = re.compile(
+    r"(?:[\s,;]+)(?:(?:lgh|lgh\.|lägenhet|lagenhet|apt\.?|apartment|unit)\s*(?:nr\.?\s*)?[a-z0-9-]+|(?:vån|van|våning|vaning|floor)\s*\d+[a-z]?)\s*$",
+    re.IGNORECASE,
+)
+
+
+def strip_non_geocodable_unit_suffix(value: str) -> tuple[str, str | None]:
+    """Remove apartment/unit details that public street geocoders normally do not index."""
+    original = re.sub(r"\s+", " ", (value or "").strip())
+    simplified = original
+    while True:
+        updated = UNIT_SUFFIX_RE.sub("", simplified).strip(" ,;")
+        if updated == simplified:
+            break
+        simplified = updated
+    if simplified and simplified != original:
+        return simplified, (
+            f"Apartment or unit details were ignored for map lookup; the address was matched using '{simplified}'."
+        )
+    return original, None
+
+
 def address_match_score(query: str, result: dict[str, Any]) -> int:
     """Conservative street/house matching for full addresses with imperfect postcode data."""
     query_text = normalize_location_text(query_without_postcode(query))
@@ -1079,17 +1101,21 @@ def _centroid_geocode_payload(
 
 
 def fetch_geocode(query: str, city_key: str) -> dict[str, Any]:
-    clean_query = query.strip()
+    original_query = re.sub(r"\s+", " ", query.strip())
+    clean_query, query_warning = strip_non_geocodable_unit_suffix(original_query)
     if not clean_query:
         raise HTTPException(status_code=400, detail="Enter an address or postal code")
     if city_key not in CITY_CONFIG:
         raise HTTPException(status_code=400, detail="The selected city dataset is not available yet")
 
-    key = geocode_cache_key(clean_query, city_key)
+    key = geocode_cache_key(original_query, city_key)
     with db() as conn:
         cached = conn.execute("SELECT result_json FROM geocode_cache WHERE cache_key=?", (key,)).fetchone()
         if cached:
             payload = json.loads(cached["result_json"])
+            payload["query"] = original_query
+            payload["geocodedQuery"] = clean_query
+            payload["queryWarning"] = query_warning
             payload["cached"] = True
             return payload
 
@@ -1179,10 +1205,12 @@ def fetch_geocode(query: str, city_key: str) -> dict[str, Any]:
                     payload = _centroid_geocode_payload(
                         requested_postcode,
                         city_key,
-                        clean_query,
+                        original_query,
                         centroid,
                         "The postcode provider did not return an exact point, so the search uses an approximate postcode centroid.",
                     )
+                    payload["geocodedQuery"] = clean_query
+                    payload["queryWarning"] = query_warning
                     with db() as conn:
                         conn.execute(
                             """
@@ -1190,7 +1218,7 @@ def fetch_geocode(query: str, city_key: str) -> dict[str, Any]:
                             VALUES (?, ?, ?, ?, ?)
                             ON CONFLICT(cache_key) DO UPDATE SET result_json=excluded.result_json, created_at=excluded.created_at
                             """,
-                            (key, clean_query, city_key, json.dumps(payload, ensure_ascii=False), now_iso()),
+                            (key, original_query, city_key, json.dumps(payload, ensure_ascii=False), now_iso()),
                         )
                         conn.commit()
                     payload["cached"] = False
@@ -1222,10 +1250,12 @@ def fetch_geocode(query: str, city_key: str) -> dict[str, Any]:
                         payload = _centroid_geocode_payload(
                             requested_postcode,
                             city_key,
-                            clean_query,
+                            original_query,
                             centroid,
                             "The full street address could not be verified, so the search uses the entered postcode centroid. Results are approximate.",
                         )
+                        payload["geocodedQuery"] = clean_query
+                        payload["queryWarning"] = query_warning
                         with db() as conn:
                             conn.execute(
                                 """
@@ -1233,7 +1263,7 @@ def fetch_geocode(query: str, city_key: str) -> dict[str, Any]:
                                 VALUES (?, ?, ?, ?, ?)
                                 ON CONFLICT(cache_key) DO UPDATE SET result_json=excluded.result_json, created_at=excluded.created_at
                                 """,
-                                (key, clean_query, city_key, json.dumps(payload, ensure_ascii=False), now_iso()),
+                                (key, original_query, city_key, json.dumps(payload, ensure_ascii=False), now_iso()),
                             )
                             conn.commit()
                         payload["cached"] = False
@@ -1255,7 +1285,9 @@ def fetch_geocode(query: str, city_key: str) -> dict[str, Any]:
             "selectedCity": CITY_CONFIG[city_key]["label"],
             "selectedCityKey": city_key,
             "matchedCityKey": None,
-            "query": clean_query,
+            "query": original_query,
+            "geocodedQuery": clean_query,
+            "queryWarning": query_warning,
             "requestedPostalCode": requested_postcode,
             "message": message,
             "provider": "OpenStreetMap Nominatim / Photon",
@@ -1297,7 +1329,9 @@ def fetch_geocode(query: str, city_key: str) -> dict[str, Any]:
             "selectedCityKey": city_key,
             "matchedCityKey": matched_city_key,
             "matchedCity": CITY_CONFIG.get(matched_city_key, {}).get("label") if matched_city_key else None,
-            "query": clean_query,
+            "query": original_query,
+            "geocodedQuery": clean_query,
+            "queryWarning": query_warning,
             "requestedPostalCode": requested_postcode,
             "displayName": chosen.get("display_name") or clean_query,
             "lat": lat,
@@ -1321,7 +1355,7 @@ def fetch_geocode(query: str, city_key: str) -> dict[str, Any]:
             VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(cache_key) DO UPDATE SET result_json=excluded.result_json, created_at=excluded.created_at
             """,
-            (key, clean_query, city_key, json.dumps(payload, ensure_ascii=False), now_iso()),
+            (key, original_query, city_key, json.dumps(payload, ensure_ascii=False), now_iso()),
         )
         conn.commit()
     payload["cached"] = False
@@ -1551,7 +1585,18 @@ def discover_nearby_map_schools(lat: float, lng: float, radius_km: float, city_k
 
 def school_identity_tokens(name: str | None) -> set[str]:
     generic = {"skola", "skolan", "grundskola", "grundskolan", "school", "f", "i"}
-    return {token for token in normalize_location_text(name).split() if token not in generic and not token.isdigit()}
+    tokens: set[str] = set()
+    for raw_token in normalize_location_text(name).split():
+        if raw_token in generic or raw_token.isdigit():
+            continue
+        token = raw_token
+        for suffix in ("grundskolan", "grundskola", "skolan", "skola", "school"):
+            if token.endswith(suffix) and len(token) > len(suffix) + 2:
+                token = token[:-len(suffix)]
+                break
+        if token and token not in generic:
+            tokens.add(token)
+    return tokens
 
 
 def school_names_similar(first: str | None, second: str | None) -> bool:
@@ -1591,6 +1636,76 @@ def map_school_api_item(school: dict[str, Any], distance: float, requested_year:
         "mapDiscovered": True,
     })
     return result
+
+
+def _candidate_source_priority(candidate: dict[str, Any]) -> int:
+    return 0 if not candidate.get("mapDiscovered") else 1
+
+
+def _nearby_candidates_duplicate(first: dict[str, Any], second: dict[str, Any]) -> bool:
+    first_unit = first.get("school_unit_id") or first.get("schoolUnitId")
+    second_unit = second.get("school_unit_id") or second.get("schoolUnitId")
+    if first_unit and second_unit and str(first_unit) == str(second_unit):
+        return True
+
+    first_name = normalize_location_text(first.get("name"))
+    second_name = normalize_location_text(second.get("name"))
+    if not school_names_similar(first.get("name"), second.get("name")):
+        return False
+
+    try:
+        proximity = haversine_km(
+            float(first.get("lat")), float(first.get("lng")),
+            float(second.get("lat")), float(second.get("lng")),
+        )
+    except (TypeError, ValueError):
+        proximity = 999.0
+
+    first_address = normalize_location_text(first.get("address"))
+    second_address = normalize_location_text(second.get("address"))
+    same_address = bool(first_address and second_address and (
+        first_address == second_address
+        or first_address in second_address
+        or second_address in first_address
+    ))
+
+    if first_name == second_name and proximity <= 1.5:
+        return True
+    if same_address and proximity <= 1.0:
+        return True
+    return proximity <= 0.8
+
+
+def deduplicate_nearby_candidates(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    ordered = sorted(
+        candidates,
+        key=lambda item: (
+            _candidate_source_priority(item),
+            float(item.get("distanceKm") if item.get("distanceKm") is not None else 9999),
+            normalize_location_text(item.get("name")),
+        ),
+    )
+    unique: list[dict[str, Any]] = []
+    for candidate in ordered:
+        duplicate = next((item for item in unique if _nearby_candidates_duplicate(item, candidate)), None)
+        if duplicate is None:
+            unique.append(candidate)
+            continue
+        duplicate["mapConfirmed"] = bool(
+            duplicate.get("mapConfirmed") or candidate.get("mapDiscovered") or candidate.get("mapConfirmed")
+        )
+        existing_urls = {
+            item.get("url") for item in duplicate.get("sources", []) if isinstance(item, dict)
+        }
+        for source in candidate.get("sources", []):
+            if isinstance(source, dict) and source.get("url") not in existing_urls:
+                duplicate.setdefault("sources", []).append(source)
+                existing_urls.add(source.get("url"))
+        duplicate["distanceKm"] = min(
+            float(duplicate.get("distanceKm") if duplicate.get("distanceKm") is not None else 9999),
+            float(candidate.get("distanceKm") if candidate.get("distanceKm") is not None else 9999),
+        )
+    return unique
 
 
 def merge_nearby_school_candidates(
@@ -1689,6 +1804,8 @@ def nearby_api(
     candidates, map_added = merge_nearby_school_candidates(
         tracked_candidates, mapped_schools, origin_lat, origin_lng, radius_km, requested_year
     )
+    candidates = deduplicate_nearby_candidates(candidates)
+    map_added = sum(1 for item in candidates if item.get("mapDiscovered"))
     candidates.sort(key=lambda item: (item["distanceKm"], -(item.get("qualityScore") or 0), item.get("name") or ""))
     selected = candidates[:limit]
     selected_map_count = sum(1 for item in selected if item.get("mapDiscovered"))
