@@ -118,5 +118,46 @@
     "municipality": "Göteborg",
     "postalCode": "436 57",
     "registrySource": "Official local fallback"
+  },
+  {
+    "slug": "fridaskolan-kalleback",
+    "name": "Fridaskolan Kallebäck",
+    "type": "Fristående",
+    "grades": "F–9",
+    "area": "Kallebäck",
+    "address": "Kallebäcks Torggata 32, 412 77 Göteborg",
+    "lat": 57.679672,
+    "lng": 12.011733,
+    "profile": "Independent F–9 school in Kallebäck",
+    "schoolUnitId": 71240644,
+    "qualityScore": null,
+    "admissionScore": null,
+    "admissionNote": "Fristående school; verify the current application and admission rules directly with the school.",
+    "f0Satisfaction": 6.8,
+    "safety": 6.7,
+    "studyPeace": 5.8,
+    "support": 6.7,
+    "studentSatisfaction": null,
+    "parentSatisfaction": null,
+    "academicSignal": null,
+    "academicScore": null,
+    "decisionNote": "F–9 option in Kallebäck. The F0 guardian survey values shown are published by Skolverket for spring 2026; academic and admission values remain separate and are not inferred.",
+    "sources": [
+      {
+        "label": "Göteborgs Stad school directory",
+        "url": "https://goteborg.se/wps/portal/start/forskola-och-utbildning/grundskola/hitta-forskoleklass-grundskola-och-anpassad-grundskola?id=7428"
+      },
+      {
+        "label": "Skolverket / Utbildningsguiden",
+        "url": "https://utbildningsguiden.skolverket.se/skolenhet?schoolUnitID=71240644"
+      }
+    ],
+    "dataYear": 2026,
+    "lastVerified": "2026-07-23",
+    "verificationNote": "Bundled official fallback verified against Göteborgs Stad and Skolverket. Coordinates are included so the school appears in nearby searches even when the national registry sync is incomplete.",
+    "cityKey": "goteborg",
+    "municipality": "Göteborg",
+    "postalCode": "412 77",
+    "registrySource": "Official local fallback"
   }
 ]

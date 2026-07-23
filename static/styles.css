@@ -195,3 +195,9 @@ input:focus, select:focus { outline: 3px solid rgba(40,75,99,.16); border-color:
 .directory-meta { margin: 8px 0 0; color: var(--muted); font-weight: 700; }
 
 .directory-status { margin: 0 0 18px; }
+
+/* v0.20 nearby discovery states */
+.nearby-warning { margin: 12px 0; }
+.nearby-badges { margin: 8px 0 10px; }
+.map-school-card { border-style: dashed; }
+.map-school-card .data-freshness { background: #fffaf0; border-color: #efddbd; }

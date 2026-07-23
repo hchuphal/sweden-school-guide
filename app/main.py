@@ -34,7 +34,7 @@ DB_PATH = Path(os.getenv("SCHOOLGUIDE_DB_PATH", DATA_DIR / "schoolguide.sqlite")
 DEFAULT_YEAR_MODE = os.getenv("DEFAULT_YEAR_MODE", "current").strip().lower()
 BASELINE_FILE = DATA_DIR / "schools-2026.json"
 GEOCODER_URL = os.getenv("GEOCODER_URL", "https://nominatim.openstreetmap.org/search")
-GEOCODER_USER_AGENT = os.getenv("GEOCODER_USER_AGENT", "SwedenSchoolGuide/0.19")
+GEOCODER_USER_AGENT = os.getenv("GEOCODER_USER_AGENT", "SwedenSchoolGuide/0.20")
 GEOCODER_EMAIL = os.getenv("GEOCODER_EMAIL", "").strip()
 SCHOOL_REGISTRY_URL = os.getenv(
     "SCHOOL_REGISTRY_URL",
@@ -44,7 +44,20 @@ AUTO_IMPORT_SCHOOL_REGISTRY = os.getenv("AUTO_IMPORT_SCHOOL_REGISTRY", "true").s
 AUTO_IMPORT_SKOLENKATEN = os.getenv("AUTO_IMPORT_SKOLENKATEN", "true").strip().lower() in {"1", "true", "yes", "on"}
 REGISTRY_SYNC_RETRY_SECONDS = int(os.getenv("REGISTRY_SYNC_RETRY_SECONDS", "120"))
 SURVEY_SYNC_RETRY_SECONDS = int(os.getenv("SURVEY_SYNC_RETRY_SECONDS", "300"))
-GEOCODER_CACHE_VERSION = "v3-postcode-strict"
+PHOTON_URL = os.getenv("PHOTON_URL", "https://photon.komoot.io/api/")
+OVERPASS_URLS = [
+    url.strip() for url in os.getenv(
+        "OVERPASS_URLS",
+        "https://overpass-api.de/api/interpreter,https://overpass.kumi.systems/api/interpreter",
+    ).split(",") if url.strip()
+]
+GEOCODER_CACHE_VERSION = "v4-postcode-flexible-map-discovery"
+MAP_SCHOOL_CACHE_TTL_SECONDS = int(os.getenv("MAP_SCHOOL_CACHE_TTL_SECONDS", "86400"))
+POSTCODE_CENTROIDS = {
+    # Representative centroids used only when public geocoders cannot resolve a valid postcode.
+    "41248": {"lat": 57.682976, "lng": 12.008317, "cityKey": "goteborg", "displayName": "412 48 Göteborg"},
+    "41277": {"lat": 57.679672, "lng": 12.011733, "cityKey": "goteborg", "displayName": "412 77 Göteborg"},
+}
 _REGISTRY_SYNC_LOCK = threading.Lock()
 _SURVEY_SYNC_LOCK = threading.Lock()
 _LAST_REGISTRY_SYNC_START = 0.0
@@ -78,9 +91,9 @@ CITY_CONFIG = {
         "search_aliases": {"uppsala"},
     },
 }
-APP_VERSION = "0.19.0"
+APP_VERSION = "0.20.0"
 
-QUALITY_METHOD_VERSION = "v0.19 city-isolated directory loading, two-year national survey matching and strict postcode geocoding"
+QUALITY_METHOD_VERSION = "v0.20 city-isolated directories, flexible postcode geocoding and live nearby-school discovery"
 MISSING_VALUE_BASELINE = 6.5
 
 QUALITY_COMPONENTS = [
@@ -232,6 +245,16 @@ def init_db() -> None:
                 city_key TEXT NOT NULL,
                 result_json TEXT NOT NULL,
                 created_at TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS nearby_school_cache (
+                cache_key TEXT PRIMARY KEY,
+                result_json TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                created_epoch REAL NOT NULL
             )
             """
         )
@@ -878,14 +901,181 @@ def detected_municipality(result: dict[str, Any]) -> str | None:
     )
 
 
-def _geocode_result_rank(result: dict[str, Any], selected_city: str, requested_postcode: str | None) -> tuple[int, int, float]:
+def _geocode_result_rank(
+    result: dict[str, Any],
+    selected_city: str,
+    requested_postcode: str | None,
+    query: str = "",
+) -> tuple[int, int, int, float]:
     exact_postcode = int(bool(requested_postcode and result_postcode_digits(result) == requested_postcode))
     selected_city_match = int(result_matches_city(result, selected_city))
+    street_score = address_match_score(query, result)
     try:
         importance = float(result.get("importance") or 0)
     except (TypeError, ValueError):
         importance = 0.0
-    return exact_postcode, selected_city_match, importance
+    return exact_postcode, street_score, selected_city_match, importance
+
+
+def is_postcode_only_query(value: str) -> bool:
+    return bool(re.fullmatch(r"\s*\d{3}\s?\d{2}\s*", value or ""))
+
+
+def formatted_postcode(value: str) -> str:
+    digits = re.sub(r"\D", "", value or "")
+    return f"{digits[:3]} {digits[3:]}" if len(digits) == 5 else value
+
+
+def query_without_postcode(value: str) -> str:
+    return POSTCODE_RE.sub(" ", value or "")
+
+
+def address_match_score(query: str, result: dict[str, Any]) -> int:
+    """Conservative street/house matching for full addresses with imperfect postcode data."""
+    query_text = normalize_location_text(query_without_postcode(query))
+    result_address = result.get("address") or {}
+    result_text = normalize_location_text(
+        " ".join(
+            str(part or "")
+            for part in (
+                result.get("display_name"),
+                result_address.get("road"),
+                result_address.get("pedestrian"),
+                result_address.get("house_number"),
+                result_address.get("suburb"),
+                result_address.get("city"),
+                result_address.get("municipality"),
+            )
+        )
+    )
+    stop_words = {
+        "sweden", "sverige", "goteborg", "gothenburg", "stockholm", "malmo", "uppsala",
+        "kommun", "stad", "lan",
+    }
+    words = [token for token in query_text.split() if len(token) >= 3 and token not in stop_words and not token.isdigit()]
+    score = sum(3 for token in words if token in result_text)
+    house_matches = re.findall(r"(?<!\d)(\d{1,4}[a-z]?)(?!\d)", query_text)
+    if house_matches:
+        candidate_house = normalize_location_text(str(result_address.get("house_number") or result.get("display_name") or ""))
+        if any(house in candidate_house.split() or re.search(rf"\b{re.escape(house)}\b", candidate_house) for house in house_matches):
+            score += 7
+        else:
+            score -= 4
+    return score
+
+
+def _postcode_centroid_from_db(postcode: str) -> dict[str, Any] | None:
+    with db() as conn:
+        row = conn.execute(
+            """
+            SELECT city_key, AVG(lat) AS lat, AVG(lng) AS lng, COUNT(*) AS n
+            FROM schools
+            WHERE REPLACE(COALESCE(postal_code, ''), ' ', '')=?
+              AND lat IS NOT NULL AND lng IS NOT NULL
+            GROUP BY city_key
+            ORDER BY n DESC
+            LIMIT 1
+            """,
+            (postcode,),
+        ).fetchone()
+    if not row:
+        return None
+    return {
+        "lat": float(row["lat"]),
+        "lng": float(row["lng"]),
+        "cityKey": row["city_key"],
+        "displayName": f"{formatted_postcode(postcode)} {CITY_CONFIG.get(row['city_key'], {}).get('label', 'Sweden')}",
+        "source": "tracked school postcode centroid",
+    }
+
+
+def postcode_centroid(postcode: str) -> dict[str, Any] | None:
+    return _postcode_centroid_from_db(postcode) or POSTCODE_CENTROIDS.get(postcode)
+
+
+def _photon_results(postcode: str, city_order: list[str]) -> list[dict[str, Any]]:
+    results: list[dict[str, Any]] = []
+    seen: set[tuple[float, float]] = set()
+    headers = {"User-Agent": GEOCODER_USER_AGENT, "Accept": "application/json"}
+    queries = [f"{formatted_postcode(postcode)}, {CITY_CONFIG[key]['label']}, Sweden" for key in city_order]
+    queries.append(f"{formatted_postcode(postcode)}, Sweden")
+    for query in queries:
+        try:
+            response = requests.get(PHOTON_URL, params={"q": query, "limit": 10, "lang": "sv"}, headers=headers, timeout=12)
+            response.raise_for_status()
+            payload = response.json()
+        except (requests.RequestException, ValueError):
+            continue
+        for feature in payload.get("features", []) if isinstance(payload, dict) else []:
+            if not isinstance(feature, dict):
+                continue
+            coordinates = (feature.get("geometry") or {}).get("coordinates") or []
+            properties = feature.get("properties") or {}
+            if len(coordinates) < 2:
+                continue
+            try:
+                lng, lat = float(coordinates[0]), float(coordinates[1])
+            except (TypeError, ValueError):
+                continue
+            candidate_postcode = extract_postcode_digits(str(properties.get("postcode") or ""))
+            if candidate_postcode != postcode:
+                continue
+            identity = (round(lat, 6), round(lng, 6))
+            if identity in seen:
+                continue
+            seen.add(identity)
+            address = {
+                "postcode": properties.get("postcode"),
+                "city": properties.get("city") or properties.get("town") or properties.get("village"),
+                "municipality": properties.get("district") or properties.get("county"),
+                "road": properties.get("street"),
+                "house_number": properties.get("housenumber"),
+            }
+            display_parts = [
+                properties.get("name"), properties.get("street"), properties.get("housenumber"),
+                properties.get("postcode"), properties.get("city"), properties.get("country"),
+            ]
+            results.append({
+                "place_id": f"photon-{lat}-{lng}",
+                "lat": str(lat),
+                "lon": str(lng),
+                "display_name": ", ".join(str(part) for part in display_parts if part),
+                "address": address,
+                "importance": properties.get("importance") or 0,
+                "type": properties.get("type") or "postcode",
+                "_provider": "Photon / OpenStreetMap",
+            })
+    return results
+
+
+def _centroid_geocode_payload(
+    postcode: str,
+    city_key: str,
+    clean_query: str,
+    centroid: dict[str, Any],
+    reason: str,
+) -> dict[str, Any]:
+    matched_city_key = centroid.get("cityKey")
+    return {
+        "found": True,
+        "insideSelectedCity": matched_city_key == city_key,
+        "selectedCity": CITY_CONFIG[city_key]["label"],
+        "selectedCityKey": city_key,
+        "matchedCityKey": matched_city_key,
+        "matchedCity": CITY_CONFIG.get(matched_city_key, {}).get("label") if matched_city_key else None,
+        "query": clean_query,
+        "requestedPostalCode": postcode,
+        "displayName": centroid.get("displayName") or formatted_postcode(postcode),
+        "lat": float(centroid["lat"]),
+        "lng": float(centroid["lng"]),
+        "postalCode": formatted_postcode(postcode),
+        "municipality": CITY_CONFIG.get(matched_city_key, {}).get("label"),
+        "resultType": "postcode-centroid",
+        "message": f"Postal code {formatted_postcode(postcode)} matched approximately within the {CITY_CONFIG.get(matched_city_key, {}).get('label', 'loaded')} dataset.",
+        "provider": "Bundled/derived postcode centroid",
+        "approximate": True,
+        "postcodeWarning": reason,
+    }
 
 
 def fetch_geocode(query: str, city_key: str) -> dict[str, Any]:
@@ -897,15 +1087,14 @@ def fetch_geocode(query: str, city_key: str) -> dict[str, Any]:
 
     key = geocode_cache_key(clean_query, city_key)
     with db() as conn:
-        cached = conn.execute(
-            "SELECT result_json FROM geocode_cache WHERE cache_key=?", (key,)
-        ).fetchone()
+        cached = conn.execute("SELECT result_json FROM geocode_cache WHERE cache_key=?", (key,)).fetchone()
         if cached:
             payload = json.loads(cached["result_json"])
             payload["cached"] = True
             return payload
 
     requested_postcode = extract_postcode_digits(clean_query)
+    postcode_only = is_postcode_only_query(clean_query)
     normalized_query = normalize_location_text(clean_query)
     city_label = CITY_CONFIG[city_key]["label"]
     has_country = "sweden" in normalized_query or "sverige" in normalized_query
@@ -924,71 +1113,142 @@ def fetch_geocode(query: str, city_key: str) -> dict[str, Any]:
     if GEOCODER_EMAIL:
         base_params["email"] = GEOCODER_EMAIL
 
+    city_order = [city_key, *[key_name for key_name in CITY_CONFIG if key_name != city_key]]
     request_params: list[dict[str, Any]] = []
-    if requested_postcode:
-        # Nominatim structured searches cannot be combined with q. This query
-        # makes a postcode-only lookup deterministic and avoids unrelated POIs.
+    if postcode_only and requested_postcode:
         request_params.append({**base_params, "postalcode": requested_postcode, "country": "Sweden"})
-    if not has_selected_city:
+        for candidate_city in city_order:
+            request_params.append({
+                **base_params,
+                "q": f"{formatted_postcode(requested_postcode)}, {CITY_CONFIG[candidate_city]['label']}, Sweden",
+            })
+    elif requested_postcode:
+        # Try both the supplied address and a version without the postcode. Some map records
+        # have old or neighbouring postcode boundaries even when street/house coordinates are correct.
+        no_postcode = re.sub(r"\s+", " ", query_without_postcode(clean_query)).strip(" ,")
+        if no_postcode:
+            request_params.append({**base_params, "q": f"{no_postcode}, {city_label}, Sweden"})
+    if not has_selected_city and not postcode_only:
         request_params.append({**base_params, "q": f"{clean_query}, {city_label}, Sweden"})
-    request_params.append({
-        **base_params,
-        "q": clean_query if has_country else f"{clean_query}, Sweden",
-    })
+    request_params.append({**base_params, "q": clean_query if has_country else f"{clean_query}, Sweden"})
 
     headers = {"User-Agent": GEOCODER_USER_AGENT, "Accept": "application/json"}
     results: list[dict[str, Any]] = []
     seen: set[tuple[str, str, str]] = set()
-    provider_status: int | None = None
-    try:
-        for params in request_params:
+    provider_errors: list[str] = []
+    for params in request_params:
+        try:
             response = requests.get(GEOCODER_URL, params=params, headers=headers, timeout=15)
-            provider_status = response.status_code
             response.raise_for_status()
             payload_results = response.json()
-            if not isinstance(payload_results, list):
+        except requests.Timeout:
+            provider_errors.append("Nominatim timed out")
+            continue
+        except requests.RequestException as exc:
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+            provider_errors.append(f"Nominatim HTTP {status}" if status else "Nominatim unavailable")
+            continue
+        except ValueError:
+            provider_errors.append("Nominatim returned invalid JSON")
+            continue
+        if not isinstance(payload_results, list):
+            continue
+        for result in payload_results:
+            if not isinstance(result, dict):
                 continue
-            for result in payload_results:
-                if not isinstance(result, dict):
-                    continue
-                identity = (
-                    str(result.get("place_id") or ""),
-                    str(result.get("lat") or ""),
-                    str(result.get("lon") or ""),
-                )
-                if identity in seen:
-                    continue
-                seen.add(identity)
-                results.append(result)
-    except requests.Timeout as exc:
-        raise HTTPException(status_code=504, detail="The address provider timed out. Please try again.") from exc
-    except requests.HTTPError as exc:
-        status = exc.response.status_code if exc.response is not None else provider_status
-        raise HTTPException(
-            status_code=502,
-            detail=f"The address provider rejected the request{f' (HTTP {status})' if status else ''}. Try again later.",
-        ) from exc
-    except requests.ConnectionError as exc:
-        raise HTTPException(status_code=503, detail="The server could not reach the address provider. Please try again shortly.") from exc
-    except requests.RequestException as exc:
-        raise HTTPException(status_code=503, detail="Address lookup is temporarily unavailable. Please try again shortly.") from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=502, detail="The address provider returned an invalid response.") from exc
+            identity = (str(result.get("place_id") or ""), str(result.get("lat") or ""), str(result.get("lon") or ""))
+            if identity in seen:
+                continue
+            seen.add(identity)
+            result.setdefault("_provider", "OpenStreetMap Nominatim")
+            results.append(result)
 
-    postcode_mismatch = False
-    eligible = results
+    exact_postcode_results = [result for result in results if requested_postcode and result_postcode_digits(result) == requested_postcode]
+    eligible: list[dict[str, Any]] = []
+    postcode_warning: str | None = None
+
     if requested_postcode:
-        eligible = [result for result in results if result_postcode_digits(result) == requested_postcode]
-        postcode_mismatch = bool(results and not eligible)
+        if exact_postcode_results:
+            eligible = exact_postcode_results
+        elif postcode_only:
+            photon_results = _photon_results(requested_postcode, city_order)
+            eligible = [result for result in photon_results if result_postcode_digits(result) == requested_postcode]
+            if not eligible:
+                centroid = postcode_centroid(requested_postcode)
+                if centroid:
+                    payload = _centroid_geocode_payload(
+                        requested_postcode,
+                        city_key,
+                        clean_query,
+                        centroid,
+                        "The postcode provider did not return an exact point, so the search uses an approximate postcode centroid.",
+                    )
+                    with db() as conn:
+                        conn.execute(
+                            """
+                            INSERT INTO geocode_cache (cache_key, query_text, city_key, result_json, created_at)
+                            VALUES (?, ?, ?, ?, ?)
+                            ON CONFLICT(cache_key) DO UPDATE SET result_json=excluded.result_json, created_at=excluded.created_at
+                            """,
+                            (key, clean_query, city_key, json.dumps(payload, ensure_ascii=False), now_iso()),
+                        )
+                        conn.commit()
+                    payload["cached"] = False
+                    return payload
+        else:
+            street_matches = [result for result in results if address_match_score(clean_query, result) >= 3]
+            expected_centroid = postcode_centroid(requested_postcode)
+            expected_city_key = expected_centroid.get("cityKey") if expected_centroid else None
+            expected_city_matches = (
+                [result for result in street_matches if result_matches_city(result, expected_city_key)]
+                if expected_city_key else []
+            )
+            if expected_city_matches:
+                street_matches = expected_city_matches
+            if street_matches:
+                eligible = street_matches
+                returned_codes = sorted({result_postcode_digits(item) for item in street_matches if result_postcode_digits(item)})
+                returned_text = ", ".join(formatted_postcode(code) for code in returned_codes)
+                postcode_warning = (
+                    f"The street/house matched, but the map provider returned postcode {returned_text or 'not available'} instead of "
+                    f"{formatted_postcode(requested_postcode)}. Distances use the matched street coordinates."
+                )
+            else:
+                photon_results = _photon_results(requested_postcode, city_order)
+                eligible = [result for result in photon_results if result_postcode_digits(result) == requested_postcode]
+                if not eligible:
+                    centroid = postcode_centroid(requested_postcode)
+                    if centroid:
+                        payload = _centroid_geocode_payload(
+                            requested_postcode,
+                            city_key,
+                            clean_query,
+                            centroid,
+                            "The full street address could not be verified, so the search uses the entered postcode centroid. Results are approximate.",
+                        )
+                        with db() as conn:
+                            conn.execute(
+                                """
+                                INSERT INTO geocode_cache (cache_key, query_text, city_key, result_json, created_at)
+                                VALUES (?, ?, ?, ?, ?)
+                                ON CONFLICT(cache_key) DO UPDATE SET result_json=excluded.result_json, created_at=excluded.created_at
+                                """,
+                                (key, clean_query, city_key, json.dumps(payload, ensure_ascii=False), now_iso()),
+                            )
+                            conn.commit()
+                        payload["cached"] = False
+                        return payload
+    else:
+        eligible = results
 
     if not eligible:
         message = (
-            f"No Swedish location with postal code {requested_postcode[:3]} {requested_postcode[3:]} matched the search."
+            f"No Swedish location with postal code {formatted_postcode(requested_postcode)} matched the search."
             if requested_postcode
             else "No Swedish address or postal code matched the search."
         )
-        if postcode_mismatch:
-            message += " Unrelated results with different postal codes were rejected."
+        if provider_errors:
+            message += f" Provider status: {'; '.join(sorted(set(provider_errors)))}."
         payload = {
             "found": False,
             "insideSelectedCity": False,
@@ -998,10 +1258,15 @@ def fetch_geocode(query: str, city_key: str) -> dict[str, Any]:
             "query": clean_query,
             "requestedPostalCode": requested_postcode,
             "message": message,
-            "provider": "OpenStreetMap Nominatim",
+            "provider": "OpenStreetMap Nominatim / Photon",
         }
     else:
-        eligible.sort(key=lambda result: _geocode_result_rank(result, city_key, requested_postcode), reverse=True)
+        preferred_city_key = city_key
+        if requested_postcode:
+            expected_centroid = postcode_centroid(requested_postcode)
+            if expected_centroid and expected_centroid.get("cityKey"):
+                preferred_city_key = str(expected_centroid["cityKey"])
+        eligible.sort(key=lambda result: _geocode_result_rank(result, preferred_city_key, requested_postcode, clean_query), reverse=True)
         chosen = eligible[0]
         address = chosen.get("address") or {}
         try:
@@ -1012,6 +1277,10 @@ def fetch_geocode(query: str, city_key: str) -> dict[str, Any]:
         inside_selected = result_matches_city(chosen, city_key)
         matched_city_key = city_key_for_result(chosen)
         municipality = detected_municipality(chosen)
+        if not matched_city_key and requested_postcode:
+            centroid = postcode_centroid(requested_postcode)
+            matched_city_key = centroid.get("cityKey") if centroid else None
+            inside_selected = matched_city_key == city_key
         message = (
             f"Address matched within the {CITY_CONFIG[city_key]['label']} dataset."
             if inside_selected
@@ -1033,11 +1302,16 @@ def fetch_geocode(query: str, city_key: str) -> dict[str, Any]:
             "displayName": chosen.get("display_name") or clean_query,
             "lat": lat,
             "lng": lng,
-            "postalCode": address.get("postcode"),
-            "municipality": municipality,
+            "postalCode": address.get("postcode") or (formatted_postcode(requested_postcode) if requested_postcode else None),
+            "municipality": municipality or CITY_CONFIG.get(matched_city_key, {}).get("label"),
             "resultType": chosen.get("type"),
             "message": message,
-            "provider": "OpenStreetMap Nominatim",
+            "provider": chosen.get("_provider") or "OpenStreetMap Nominatim",
+            "approximate": postcode_only,
+            "postcodeWarning": postcode_warning or (
+                "A postcode identifies an area rather than one exact property. Nearby distances use the provider's representative postcode point."
+                if postcode_only else None
+            ),
         }
 
     with db() as conn:
@@ -1045,15 +1319,14 @@ def fetch_geocode(query: str, city_key: str) -> dict[str, Any]:
             """
             INSERT INTO geocode_cache (cache_key, query_text, city_key, result_json, created_at)
             VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(cache_key) DO UPDATE SET
-                result_json=excluded.result_json,
-                created_at=excluded.created_at
+            ON CONFLICT(cache_key) DO UPDATE SET result_json=excluded.result_json, created_at=excluded.created_at
             """,
             (key, clean_query, city_key, json.dumps(payload, ensure_ascii=False), now_iso()),
         )
         conn.commit()
     payload["cached"] = False
     return payload
+
 
 def get_available_years(conn: sqlite3.Connection) -> list[int]:
     rows = conn.execute(
@@ -1108,6 +1381,256 @@ def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     return 2 * radius * asin(sqrt(a))
 
 
+
+def map_school_cache_key(lat: float, lng: float, radius_km: float) -> str:
+    return f"osm-schools-v1:{lat:.3f}:{lng:.3f}:{radius_km:.1f}"
+
+
+def _normalise_osm_grade(value: str | None) -> str | None:
+    text = normalize_location_text(value)
+    if not text:
+        return None
+    match = re.search(r"(?:^|\s)(?:f|0)\s*(?:-|to|till)?\s*([1-9])(?:$|\s)", text)
+    if match:
+        return f"F–{match.group(1)}"
+    match = re.search(r"(?:^|\s)([1-9])\s*(?:-|to|till)\s*([1-9])(?:$|\s)", text)
+    if match:
+        return f"{match.group(1)}–{match.group(2)}"
+    if "forskoleklass" in text and "grundskola" in text:
+        return "F–9"
+    return None
+
+
+def infer_osm_school_grades(tags: dict[str, Any], name: str) -> str:
+    for key in ("school:grades", "grades", "grade", "school:grade"):
+        parsed = _normalise_osm_grade(str(tags.get(key) or ""))
+        if parsed:
+            return parsed
+    parsed_name = _normalise_osm_grade(name)
+    if parsed_name:
+        return parsed_name
+    isced = normalize_location_text(tags.get("isced:level"))
+    if any(level in isced.split() for level in ("1", "2")):
+        return "Grundskola"
+    return "Grades not verified"
+
+
+def infer_osm_school_type(tags: dict[str, Any]) -> str:
+    combined = normalize_location_text(" ".join(str(tags.get(key) or "") for key in (
+        "operator:type", "ownership", "school:ownership", "operator", "brand", "description"
+    )))
+    if any(token in combined for token in ("private", "independent", "fristaende", "enskild")):
+        return "Fristående"
+    if any(token in combined for token in ("public", "municipal", "kommunal", "goteborgs stad", "stockholms stad", "malmo stad", "uppsala kommun")):
+        return "Municipal"
+    return "Type not verified"
+
+
+def is_relevant_ground_school(name: str, tags: dict[str, Any]) -> bool:
+    text = normalize_location_text(" ".join(str(value or "") for value in (name, tags.get("description"), tags.get("school:grades"), tags.get("isced:level"))))
+    excluded = (
+        "forskola", "preschool", "kindergarten", "gymnasium", "high school", "universitet",
+        "university", "hogskola", "komvux", "folkhogskola", "trafikskola", "kulturskola",
+    )
+    grade_evidence = bool(_normalise_osm_grade(str(tags.get("school:grades") or ""))) or any(
+        level in normalize_location_text(tags.get("isced:level")).split() for level in ("1", "2")
+    )
+    if any(token in text for token in excluded) and not grade_evidence:
+        return False
+    return bool(name.strip())
+
+
+def osm_school_address(tags: dict[str, Any], fallback_city: str) -> str:
+    street = str(tags.get("addr:street") or "").strip()
+    number = str(tags.get("addr:housenumber") or "").strip()
+    postcode = str(tags.get("addr:postcode") or "").strip()
+    city = str(tags.get("addr:city") or fallback_city or "").strip()
+    street_line = " ".join(part for part in (street, number) if part)
+    return ", ".join(part for part in (street_line, postcode, city) if part) or fallback_city
+
+
+def _parse_overpass_schools(payload: dict[str, Any], city_key: str) -> list[dict[str, Any]]:
+    schools: list[dict[str, Any]] = []
+    city_label = CITY_CONFIG[city_key]["label"]
+    for element in payload.get("elements", []) if isinstance(payload, dict) else []:
+        if not isinstance(element, dict):
+            continue
+        tags = element.get("tags") or {}
+        name = str(tags.get("name") or tags.get("official_name") or "").strip()
+        if not is_relevant_ground_school(name, tags):
+            continue
+        center = element.get("center") or {}
+        lat = element.get("lat", center.get("lat"))
+        lng = element.get("lon", center.get("lon"))
+        try:
+            lat_f, lng_f = float(lat), float(lng)
+        except (TypeError, ValueError):
+            continue
+        osm_type = str(element.get("type") or "node")
+        osm_id = element.get("id")
+        source_url = f"https://www.openstreetmap.org/{osm_type}/{osm_id}" if osm_id else "https://www.openstreetmap.org/"
+        schools.append({
+            "slug": f"osm-school-{osm_type}-{osm_id}",
+            "name": name,
+            "type": infer_osm_school_type(tags),
+            "grades": infer_osm_school_grades(tags, name),
+            "area": str(tags.get("addr:suburb") or tags.get("addr:district") or tags.get("addr:city") or city_label),
+            "address": osm_school_address(tags, city_label),
+            "lat": lat_f,
+            "lng": lng_f,
+            "profile": "Nearby school discovered from current OpenStreetMap data",
+            "cityKey": city_key,
+            "municipality": str(tags.get("addr:city") or city_label),
+            "postalCode": tags.get("addr:postcode"),
+            "registrySource": "OpenStreetMap nearby discovery",
+            "school_unit_id": None,
+            "sources": [{"label": "OpenStreetMap map record", "url": source_url}],
+            "mapDiscovered": True,
+            "mapTags": {key: tags.get(key) for key in ("operator", "operator:type", "school:grades", "isced:level") if tags.get(key)},
+        })
+    return schools
+
+
+def discover_nearby_map_schools(lat: float, lng: float, radius_km: float, city_key: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    discovery_radius = min(max(float(radius_km), 1.0), 12.0)
+    cache_key = map_school_cache_key(lat, lng, discovery_radius)
+    with db() as conn:
+        row = conn.execute(
+            "SELECT result_json, created_epoch FROM nearby_school_cache WHERE cache_key=?", (cache_key,)
+        ).fetchone()
+    if row and time.time() - float(row["created_epoch"]) <= MAP_SCHOOL_CACHE_TTL_SECONDS:
+        cached = json.loads(row["result_json"])
+        return cached.get("schools", []), {
+            "status": "cached", "provider": "OpenStreetMap Overpass", "radiusKm": discovery_radius,
+            "count": len(cached.get("schools", [])),
+        }
+
+    radius_m = int(discovery_radius * 1000)
+    query = (
+        "[out:json][timeout:20];"
+        "("
+        f'nwr(around:{radius_m},{lat:.7f},{lng:.7f})["amenity"="school"];'
+        f'nwr(around:{radius_m},{lat:.7f},{lng:.7f})["building"="school"]["name"];'
+        ");out center tags;"
+    )
+    errors: list[str] = []
+    headers = {"User-Agent": GEOCODER_USER_AGENT, "Accept": "application/json"}
+    for endpoint in OVERPASS_URLS:
+        try:
+            response = requests.post(endpoint, data={"data": query}, headers=headers, timeout=28)
+            response.raise_for_status()
+            payload = response.json()
+            schools = _parse_overpass_schools(payload, city_key)
+            with db() as conn:
+                conn.execute(
+                    """
+                    INSERT INTO nearby_school_cache (cache_key, result_json, created_at, created_epoch)
+                    VALUES (?, ?, ?, ?)
+                    ON CONFLICT(cache_key) DO UPDATE SET
+                        result_json=excluded.result_json, created_at=excluded.created_at, created_epoch=excluded.created_epoch
+                    """,
+                    (cache_key, json.dumps({"schools": schools}, ensure_ascii=False), now_iso(), time.time()),
+                )
+                conn.commit()
+            return schools, {
+                "status": "live", "provider": "OpenStreetMap Overpass", "endpoint": endpoint,
+                "radiusKm": discovery_radius, "count": len(schools),
+            }
+        except requests.Timeout:
+            errors.append(f"{endpoint}: timeout")
+        except requests.RequestException as exc:
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+            errors.append(f"{endpoint}: HTTP {status}" if status else f"{endpoint}: unavailable")
+        except ValueError:
+            errors.append(f"{endpoint}: invalid response")
+    return [], {
+        "status": "failed", "provider": "OpenStreetMap Overpass", "radiusKm": discovery_radius,
+        "count": 0, "error": "; ".join(errors) or "Map school discovery unavailable",
+    }
+
+
+def school_identity_tokens(name: str | None) -> set[str]:
+    generic = {"skola", "skolan", "grundskola", "grundskolan", "school", "f", "i"}
+    return {token for token in normalize_location_text(name).split() if token not in generic and not token.isdigit()}
+
+
+def school_names_similar(first: str | None, second: str | None) -> bool:
+    a = normalize_location_text(first)
+    b = normalize_location_text(second)
+    if not a or not b:
+        return False
+    if a == b or (len(a) >= 8 and a in b) or (len(b) >= 8 and b in a):
+        return True
+    a_tokens, b_tokens = school_identity_tokens(first), school_identity_tokens(second)
+    if not a_tokens or not b_tokens:
+        return False
+    overlap = len(a_tokens & b_tokens)
+    return overlap >= 1 and overlap / max(1, min(len(a_tokens), len(b_tokens))) >= 0.6
+
+
+def map_school_api_item(school: dict[str, Any], distance: float, requested_year: int | None) -> dict[str, Any]:
+    result = dict(school)
+    for field in METRIC_FIELDS:
+        result[field] = None
+    result.update({
+        "dataYear": None,
+        "requestedDataYear": requested_year,
+        "isFallback": False,
+        "fallbackLabel": None,
+        "editorialQualityScore": None,
+        "qualityScore": None,
+        "qualityBreakdown": [],
+        "dataCompletenessPct": 0,
+        "dataConfidenceLabel": "Map record only",
+        "missingQualityFields": [item["key"] for item in QUALITY_COMPONENTS],
+        "verificationNote": "Nearby map record. Confirm current school type, grades and admissions through the municipality or Skolverket source.",
+        "decisionNote": "Discovered near the searched address from OpenStreetMap; national ratings have not yet been matched to this record.",
+        "admissionNote": "Admission data is not matched to this map record.",
+        "academicSignal": "Academic data is not matched to this map record.",
+        "distanceKm": round(distance, 2),
+        "mapDiscovered": True,
+    })
+    return result
+
+
+def merge_nearby_school_candidates(
+    tracked: list[dict[str, Any]],
+    mapped: list[dict[str, Any]],
+    origin_lat: float,
+    origin_lng: float,
+    radius_km: float,
+    requested_year: int | None,
+) -> tuple[list[dict[str, Any]], int]:
+    merged = list(tracked)
+    added = 0
+    for map_school in mapped:
+        distance = haversine_km(origin_lat, origin_lng, float(map_school["lat"]), float(map_school["lng"]))
+        if distance > radius_km:
+            continue
+        duplicate: dict[str, Any] | None = None
+        for candidate in merged:
+            candidate_lat, candidate_lng = candidate.get("lat"), candidate.get("lng")
+            proximity = 999.0
+            if candidate_lat is not None and candidate_lng is not None:
+                proximity = haversine_km(float(candidate_lat), float(candidate_lng), float(map_school["lat"]), float(map_school["lng"]))
+            if school_names_similar(candidate.get("name"), map_school.get("name")) and proximity <= 0.8:
+                duplicate = candidate
+                break
+            if proximity <= 0.06 and school_identity_tokens(candidate.get("name")) & school_identity_tokens(map_school.get("name")):
+                duplicate = candidate
+                break
+        if duplicate:
+            duplicate["mapConfirmed"] = True
+            existing_urls = {item.get("url") for item in duplicate.get("sources", [])}
+            for source in map_school.get("sources", []):
+                if source.get("url") not in existing_urls:
+                    duplicate.setdefault("sources", []).append(source)
+            continue
+        merged.append(map_school_api_item(map_school, distance, requested_year))
+        added += 1
+    return merged, added
+
+
 @app.get("/api/nearby")
 def nearby_api(
     q: str = Query(min_length=3, max_length=220),
@@ -1144,33 +1667,53 @@ def nearby_api(
             "SELECT * FROM schools WHERE city_key=? AND lat IS NOT NULL AND lng IS NOT NULL",
             (matched_city,),
         ).fetchall()
-        candidates: list[dict[str, Any]] = []
+        requested_year, _ = resolve_year_param(conn, year)
+        tracked_candidates: list[dict[str, Any]] = []
         for school in rows:
             distance = haversine_km(origin_lat, origin_lng, float(school["lat"]), float(school["lng"]))
             if distance > radius_km:
                 continue
-            metric, fallback, requested_year = metric_row_for(conn, school["slug"], year)
+            metric, fallback, metric_requested_year = metric_row_for(conn, school["slug"], year)
             item = (
-                combine_school_and_metric(school, metric, fallback, requested_year)
+                combine_school_and_metric(school, metric, fallback, metric_requested_year)
                 if metric
-                else combine_school_without_metric(school, requested_year)
+                else combine_school_without_metric(school, metric_requested_year)
             )
             item["distanceKm"] = round(distance, 2)
-            candidates.append(item)
-    candidates.sort(key=lambda item: (item["distanceKm"], -(item.get("qualityScore") or 0)))
+            item["mapDiscovered"] = False
+            tracked_candidates.append(item)
+
+    mapped_schools, map_meta = discover_nearby_map_schools(
+        origin_lat, origin_lng, radius_km, matched_city
+    )
+    candidates, map_added = merge_nearby_school_candidates(
+        tracked_candidates, mapped_schools, origin_lat, origin_lng, radius_km, requested_year
+    )
+    candidates.sort(key=lambda item: (item["distanceKm"], -(item.get("qualityScore") or 0), item.get("name") or ""))
     selected = candidates[:limit]
+    selected_map_count = sum(1 for item in selected if item.get("mapDiscovered"))
+    selected_tracked_count = len(selected) - selected_map_count
     registry_sync = get_state("registry_sync")
+
     if selected:
-        message = f"Showing tracked schools in the {CITY_CONFIG[matched_city]['label']} dataset."
-    elif coordinate_count == 0:
+        coverage_parts = [f"{selected_tracked_count} tracked record{'s' if selected_tracked_count != 1 else ''}"]
+        if selected_map_count:
+            coverage_parts.append(f"{selected_map_count} additional map-discovered school{'s' if selected_map_count != 1 else ''}")
+        message = (
+            f"Showing {' and '.join(coverage_parts)} near the address in the "
+            f"{CITY_CONFIG[matched_city]['label']} dataset."
+        )
+        if map_meta.get("status") == "failed":
+            message += " Live map discovery was unavailable, so some nearby schools may still be missing."
+    elif coordinate_count == 0 and map_meta.get("count", 0) == 0:
         message = (
             f"{tracked_count} tracked schools are loaded for {CITY_CONFIG[matched_city]['label']}, "
-            "but none currently have coordinates. The official registry coordinate refresh has not succeeded yet."
+            "but none currently have coordinates and live map discovery returned no schools."
         )
     else:
         message = (
-            f"No tracked school with coordinates was found within {radius_km:g} km. "
-            f"Coordinate coverage: {coordinate_count} of {tracked_count} loaded schools."
+            f"No ground school was found within {radius_km:g} km from the tracked records or live map discovery. "
+            f"Tracked coordinate coverage: {coordinate_count} of {tracked_count}."
         )
     return {
         "geocode": geocode,
@@ -1181,6 +1724,9 @@ def nearby_api(
         "radiusKm": radius_km,
         "trackedSchoolCount": tracked_count,
         "coordinateSchoolCount": coordinate_count,
+        "trackedCandidatesWithinRadius": len(tracked_candidates),
+        "mapDiscoveredCandidates": map_added,
+        "mapDiscovery": map_meta,
         "registrySync": registry_sync,
         "count": len(selected),
         "schools": selected,
@@ -1223,7 +1769,8 @@ def metadata() -> dict[str, Any]:
         "qualityMethodVersion": QUALITY_METHOD_VERSION,
         "qualityFormula": calculate_quality({})["qualityFormula"],
         "updateMode": "Default mode uses the current imported data year. If a current-year record is missing for a school, the API falls back to the latest prior verified year for that school.",
-        "geocoding": {"provider": "OpenStreetMap Nominatim", "supportedCities": list(CITY_CONFIG.keys()), "cache": True},
+        "geocoding": {"provider": "OpenStreetMap Nominatim + Photon with postcode-centroid fallback", "supportedCities": list(CITY_CONFIG.keys()), "cache": True},
+        "nearbyDiscovery": {"provider": "OpenStreetMap Overpass", "cacheHours": round(MAP_SCHOOL_CACHE_TTL_SECONDS / 3600, 1), "maxDiscoveryRadiusKm": 12},
         "cities": [
             {"key": key, "label": config["label"], "municipalityCodes": sorted(config.get("municipality_codes", set()))}
             for key, config in CITY_CONFIG.items()

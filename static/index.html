@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Sweden School Guide</title>
   <meta name="description" content="School-choice guide for families in Sweden." />
-  <link rel="stylesheet" href="/assets/styles.css?v=0.19" />
+  <link rel="stylesheet" href="/assets/styles.css?v=0.20" />
 </head>
 <body>
   <header class="hero">
@@ -28,7 +28,7 @@
           </svg>
         </span>
         <span class="brand-text">
-          <span class="brand-title-row"><span class="brand-title">Sweden School Guide</span><span class="brand-version">v0.19</span></span>
+          <span class="brand-title-row"><span class="brand-title">Sweden School Guide</span><span class="brand-version">v0.20</span></span>
           <span class="brand-subtitle">School search, ratings and admissions</span>
         </span>
       </div>
@@ -137,8 +137,8 @@
           <h2>Find nearby schools</h2>
         </div>
         <div class="section-note-card compact">
-          <strong>Live address lookup</strong>
-          <span>Enter a full Swedish address or postal code. The app detects the loaded city region automatically and returns nearby schools from that dataset. Distances remain straight-line estimates.</span>
+          <strong>Address and live school lookup</strong>
+          <span>Enter a full Swedish address or postal code. Results combine tracked official school records with nearby schools discovered from current OpenStreetMap data. Distances remain straight-line estimates.</span>
         </div>
       </div>
 
@@ -149,7 +149,7 @@
         </label>
         <button id="findNearbyBtn" class="button primary" type="button">Find schools</button>
       </div>
-      <p class="geocoder-attribution">Address lookup by <a href="https://nominatim.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap Nominatim</a>. School facts are synchronised from Skolverket’s school-unit register.</p>
+      <p class="geocoder-attribution">Address lookup uses OpenStreetMap-based geocoders. Nearby results combine Skolverket/local tracked records with <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a> discovery; map-only school facts should be verified.</p>
       <div id="nearbyResults" class="nearby-results"></div>
     </section>
 
@@ -202,10 +202,10 @@
   </main>
 
   <footer class="footer">
-    <p>Built as MVP v0.19. Four city datasets + city-safe refreshes + two-year national Skolenkäten enrichment + strict postcode matching.</p>
+    <p>Built as MVP v0.20. Four city datasets + flexible postcode matching + tracked records combined with live nearby-school discovery.</p>
     <p><a href="/api/metadata">API metadata</a> · <a href="/assets/README.md">README</a></p>
   </footer>
 
-  <script src="/assets/app.js?v=0.19"></script>
+  <script src="/assets/app.js?v=0.20"></script>
 </body>
 </html>

@@ -352,18 +352,32 @@ async function renderNearby() {
       return;
     }
 
+    const postcodeWarning = result.postcodeWarning
+      ? `<div class="notice nearby-warning"><strong>Location note:</strong> ${escapeHtml(result.postcodeWarning)}</div>`
+      : "";
+    const discoveryNote = payload.mapDiscovery?.status === "failed"
+      ? `<div class="notice nearby-warning"><strong>Map discovery unavailable:</strong> ${escapeHtml(payload.mapDiscovery.error || "Only tracked schools could be returned for this search.")}</div>`
+      : "";
     $("nearbyResults").innerHTML = `
-      <p class="nearby-context">Matched <strong>${escapeHtml(result.displayName || input)}</strong>${result.postalCode ? ` · postal code ${escapeHtml(result.postalCode)}` : ""}. ${escapeHtml(payload.message || "")} Distances are straight-line estimates.</p>
+      <p class="nearby-context">Matched <strong>${escapeHtml(result.displayName || input)}</strong>${result.postalCode ? ` · postal code ${escapeHtml(result.postalCode)}` : ""}${result.approximate ? " · approximate postcode point" : ""}. ${escapeHtml(payload.message || "")} Distances are straight-line estimates.</p>
+      ${postcodeWarning}
+      ${discoveryNote}
       ${nearby.map((school, index) => `
-        <article class="nearby-card">
+        <article class="nearby-card ${school.mapDiscovered ? "map-school-card" : ""}">
           <div>
             <p class="eyebrow">Option ${index + 1}</p>
             <h3>${escapeHtml(school.name)}</h3>
-            <p class="card-meta">${escapeHtml(school.type)} · ${escapeHtml(school.grades)} · ${escapeHtml(school.municipality || school.area)}</p>
+            <div class="badges nearby-badges">
+              ${school.mapDiscovered ? `<span class="badge warn">Nearby map discovery</span>` : `<span class="badge good">Tracked school record</span>`}
+              ${school.mapConfirmed ? `<span class="badge">Map location confirmed</span>` : ""}
+            </div>
+            <p class="card-meta">${escapeHtml(school.type || "Type not verified")} · ${escapeHtml(school.grades || "Grades not verified")} · ${escapeHtml(school.municipality || school.area || "Area not verified")}</p>
+            ${school.address ? `<p class="card-meta">${escapeHtml(school.address)}</p>` : ""}
             ${dataFreshness(school)}
             <div class="metric-row"><span>Computed quality</span><strong>${fmt100(school.qualityScore)}</strong></div>
             <div class="metric-row"><span>Admission realism</span><strong>${fmt100(school.admissionScore)}</strong></div>
-            <p class="decision-note">${escapeHtml(school.decisionNote || school.verificationNote || "Official school record; detailed ratings may not yet be imported.")}</p>
+            <p class="decision-note">${escapeHtml(school.decisionNote || school.verificationNote || "School record found near the address; detailed ratings may not yet be matched.")}</p>
+            <p class="sources">${sourceLinks(school)}</p>
           </div>
           <div class="distance">
             <strong>${Number(school.distanceKm).toFixed(1)} km</strong>
